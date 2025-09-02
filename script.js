@@ -595,44 +595,26 @@ function renderCategories() {
         const editHint = isMobile ? 'Duplo-toque para editar' : 'Duplo-clique para editar';
         
         categoryCard.innerHTML = `
+            <button class="card-edit-btn" title="Editar" type="button">
+                <i class="fas fa-pen"></i>
+            </button>
             <i class="${iconClass}" style="color: ${iconColor}"></i>
             <h3>${category.name}</h3>
             <div class="category-edit-hint">${editHint}</div>
         `;
         
-        // Adicionar event listeners para click (filtro) e double-click (edição)
+        // Adicionar event listener para click (filtro)
         categoryCard.addEventListener('click', () => filterByCategory(category.name));
-        
-        // Adicionar double-click para edição
-        categoryCard.addEventListener('dblclick', (e) => {
+
+        // Botão de edição (dblclick/double-tap apenas no ícone)
+        const editBtn = categoryCard.querySelector('.card-edit-btn');
+        editBtn.addEventListener('dblclick', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Feedback visual
-            categoryCard.style.transform = 'scale(0.95)';
-            setTimeout(() => {
-                categoryCard.style.transform = 'scale(1)';
-            }, 150);
             showEditCategoryModal(category);
         });
-        
-        // Adicionar suporte para double-tap em dispositivos móveis
-        let lastTap = 0;
-        categoryCard.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            
-            if (tapLength < 500 && tapLength > 0) {
-                // Double-tap detectado
-                e.preventDefault();
-                e.stopPropagation();
-                // Feedback visual
-                categoryCard.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    categoryCard.style.transform = 'scale(1)';
-                }, 150);
-                showEditCategoryModal(category);
-            }
-            lastTap = currentTime;
+        attachDoubleTap(editBtn, (e) => {
+            showEditCategoryModal(category);
         });
         
         categoriesGrid.appendChild(categoryCard);
@@ -1095,6 +1077,9 @@ function renderProducts() {
         const quantity = cartItem ? cartItem.quantity : 0;
         
         productCard.innerHTML = `
+            <button class="card-edit-btn" title="Editar" type="button">
+                <i class="fas fa-pen"></i>
+            </button>
             <div class="product-image">
                 <i class="${product.icon}"></i>
             </div>
@@ -1111,27 +1096,17 @@ function renderProducts() {
             </div>
         `;
 
-        // Duplo‑clique (desktop) para editar
-        productCard.addEventListener('dblclick', (e) => {
+        // Botão de edição (dblclick/double-tap apenas no botão)
+        const editBtn = productCard.querySelector('.card-edit-btn');
+        editBtn.addEventListener('dblclick', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            productCard.style.transform = 'scale(0.98)';
-            setTimeout(() => { productCard.style.transform = 'scale(1)'; }, 120);
             const fullProduct = products.find(p => p.id === product.id);
             if (fullProduct) showEditProductModal(fullProduct);
         });
-
-        // Double‑tap (mobile) robusto
-        attachDoubleTap(productCard, (ev) => {
-            // Ignorar taps em botões internos (ex: adicionar à sacola)
-            const target = ev.target;
-            if (target.closest && target.closest('button')) return;
+        attachDoubleTap(editBtn, () => {
             const fullProduct = products.find(p => p.id === product.id);
-            if (fullProduct) {
-                productCard.style.transform = 'scale(0.98)';
-                setTimeout(() => { productCard.style.transform = 'scale(1)'; }, 120);
-                showEditProductModal(fullProduct);
-            }
+            if (fullProduct) showEditProductModal(fullProduct);
         });
         
         productsGrid.appendChild(productCard);
