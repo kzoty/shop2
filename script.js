@@ -590,9 +590,8 @@ function renderCategories() {
         const iconClass = category.icon || 'fas fa-bread-slice';
         const iconColor = category.color || '#8B4513';
         
-        // Detectar se é dispositivo móvel
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const editHint = isMobile ? 'Duplo-toque para editar' : 'Duplo-clique para editar';
+
+
         
         categoryCard.innerHTML = `
             <button class="card-edit-btn" title="Editar" type="button">
@@ -600,7 +599,7 @@ function renderCategories() {
             </button>
             <i class="${iconClass}" style="color: ${iconColor}"></i>
             <h3>${category.name}</h3>
-            <div class="category-edit-hint">${editHint}</div>
+
         `;
         
         // Adicionar event listener para click (filtro)
@@ -2094,22 +2093,10 @@ document.addEventListener('DOMContentLoaded', function() {
         font-size: 0.9rem;
     `;
     
-    const reloadBtn = document.createElement('button');
-    reloadBtn.textContent = '🔄 Recarregar Categorias';
-    reloadBtn.onclick = reloadCategories;
-    reloadBtn.style.cssText = `
-        padding: 8px 16px;
-        background: #3498db;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.9rem;
-    `;
+
     
     devButtons.appendChild(clearBtn);
     devButtons.appendChild(checkoutBtn);
-    devButtons.appendChild(reloadBtn);
     footer.appendChild(devButtons);
 });
 
