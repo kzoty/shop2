@@ -216,9 +216,9 @@ body {
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%; 
     border: none;
     background: rgba(0,0,0,0.05);
     color: #555;
@@ -228,7 +228,34 @@ body {
     cursor: pointer;
     transition: background 0.2s ease, transform 0.1s ease;
     z-index: 2;
-    font-size: 0.7rem;
+    /*font-size: 0.7rem;*/
+}
+
+/* Adicione esta regra para controlar o tamanho do ícone */
+.card-edit-btn i {
+    font-size: 14px; /* Tamanho base que será sobrescrito */
+}
+
+/* Ícone de edição nas CATEGORIAS (22px) */
+.category-card .card-edit-btn i {
+    font-size: 14px !important; /* 22px do botão ÷ 2 = 11px para o ícone */
+}
+
+/* Ícone de edição nos PRODUTOS (28px - mantém o tamanho original) */
+.product-card .card-edit-btn i {
+    font-size: 14px !important; /* 28px do botão ÷ 2 = 14px para o ícone */
+}
+
+/* Para reduzir também o botão nas categorias (opcional) */
+.category-card .card-edit-btn {
+    width: 22px;
+    height: 22px;
+}
+
+/* Mantém o tamanho original nos produtos */
+.product-card .card-edit-btn {
+    width: 28px;
+    height: 28px;
 }
 
 .card-edit-btn:hover {
