@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Padaria Artesanal - PDV</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header com busca -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-bread-slice"></i>
+                <h1>Padaria Artesanal</h1>
+            </div>
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" id="searchInput" placeholder="Buscar produtos..." class="search-input">
+                    <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <button class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Área principal -->
+        <main class="main-content">
+            <!-- Categorias -->
+            <section class="categories-section">
+                <div class="categories-header">
+                    <h2>Categorias</h2>
+                    <button class="add-category-btn" onclick="showAddCategoryModal()">
+                        <i class="fas fa-plus"></i>
+                        Nova Categoria
+                    </button>
+                </div>
+                <div class="categories-grid" id="categoriesGrid">
+                    <!-- Categorias serão inseridas via JavaScript -->
+                </div>
+            </section>
+
+            <!-- Produtos em destaque -->
+            <section class="products-section">
+                <div class="products-header">
+                    <h2>Produtos em Destaque</h2>
+                    <button class="add-product-btn" onclick="showAddProductModal()">
+                        <i class="fas fa-plus"></i>
+                        Novo Produto
+                    </button>
+                </div>
+                <div class="products-grid" id="productsGrid">
+                    <!-- Produtos serão inseridos via JavaScript -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer com informações -->
+        <footer class="footer">
+            <div class="footer-info">
+                <div class="total-products">
+                    <i class="fas fa-boxes"></i>
+                    <span>Total de Produtos: <strong id="totalProducts">0</strong></span>
+                </div>
+                <div class="cart-total">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span>Itens na Sacola: <strong id="cartItems">0</strong></span>
+                </div>
+                <div class="cart-value">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>Valor Total: <strong id="cartValue">R$ 0,00</strong></span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
