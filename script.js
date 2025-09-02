@@ -709,6 +709,7 @@ function closeAddCategoryModal() {
 document.addEventListener('click', function(event) {
     const categoryModal = document.getElementById('addCategoryModal');
     const editCategoryModal = document.getElementById('editCategoryModal');
+    const editProductModal = document.getElementById('editProductModal');
     const productModal = document.getElementById('addProductModal');
     
     if (categoryModal && event.target === categoryModal) {
@@ -719,6 +720,10 @@ document.addEventListener('click', function(event) {
         closeEditCategoryModal();
     }
     
+    if (editProductModal && event.target === editProductModal) {
+        closeEditProductModal();
+    }
+
     if (productModal && event.target === productModal) {
         closeAddProductModal();
     }
@@ -729,12 +734,16 @@ document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         const categoryModal = document.getElementById('addCategoryModal');
         const editCategoryModal = document.getElementById('editCategoryModal');
+        const editProductModal = document.getElementById('editProductModal');
         const productModal = document.getElementById('addProductModal');
         if (categoryModal) {
             closeAddCategoryModal();
         }
         if (editCategoryModal) {
             closeEditCategoryModal();
+        }
+        if (editProductModal) {
+            closeEditProductModal();
         }
         if (productModal) {
             closeAddProductModal();
@@ -1079,6 +1088,7 @@ function renderProducts() {
     filteredProducts.forEach(product => {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
+        productCard.dataset.productId = product.id;
         
         // Verificar quantidade no carrinho para este produto
         const cartItem = cart.find(item => item.id === product.id);
@@ -1100,6 +1110,32 @@ function renderProducts() {
                 </button>
             </div>
         `;
+
+        // Duplo‑clique (desktop) para editar
+        productCard.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            productCard.style.transform = 'scale(0.98)';
+            setTimeout(() => { productCard.style.transform = 'scale(1)'; }, 120);
+            const fullProduct = products.find(p => p.id === product.id);
+            if (fullProduct) showEditProductModal(fullProduct);
+        });
+
+        // Double‑tap (mobile)
+        let lastTap = 0;
+        productCard.addEventListener('touchend', (e) => {
+            const now = Date.now();
+            const delta = now - lastTap;
+            if (delta > 0 && delta < 500) {
+                e.preventDefault();
+                e.stopPropagation();
+                productCard.style.transform = 'scale(0.98)';
+                setTimeout(() => { productCard.style.transform = 'scale(1)'; }, 120);
+                const fullProduct = products.find(p => p.id === product.id);
+                if (fullProduct) showEditProductModal(fullProduct);
+            }
+            lastTap = now;
+        });
         
         productsGrid.appendChild(productCard);
     });
@@ -1837,6 +1873,161 @@ async function updateCategory(event, categoryId) {
         // Reabilitar botão
         updateBtn.disabled = false;
         updateBtn.textContent = 'Atualizar Categoria';
+    }
+}
+
+// =====================
+// Edição de Produto
+// =====================
+
+function showEditProductModal(product) {
+    const modal = document.createElement('div');
+    modal.className = 'edit-product-modal';
+    modal.id = 'editProductModal';
+    
+    const categoryOptions = categories.map(category => {
+        const selected = category.id === product.categoryId ? 'selected' : '';
+        return `<option value="${category.id}" ${selected}>${category.name}</option>`;
+    }).join('');
+    
+    modal.innerHTML = `
+        <div class="edit-product-modal-content">
+            <div class="edit-product-header">
+                <h2>✏️ Editar Produto</h2>
+                <button class="close-edit-product-btn" onclick="closeEditProductModal()">×</button>
+            </div>
+            
+            <form class="edit-product-form" onsubmit="updateProduct(event, ${product.id})">
+                <div class="form-group">
+                    <label for="editProductName">Nome do Produto:</label>
+                    <input type="text" id="editProductName" value="${product.name}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editProductPrice">Preço (R$):</label>
+                    <input type="number" id="editProductPrice" value="${product.price}" step="0.01" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editProductCategory">Categoria:</label>
+                    <select id="editProductCategory" required>
+                        ${categoryOptions}
+                    </select>
+                </div>
+                
+                <div class="edit-product-actions">
+                    <button type="button" class="cancel-btn" onclick="closeEditProductModal()">Cancelar</button>
+                    <button type="submit" class="save-category-btn" id="updateProductBtn">Atualizar Produto</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    setTimeout(() => {
+        const nameInput = document.getElementById('editProductName');
+        nameInput.focus();
+        const submitOnEnter = (e) => { if (e.key === 'Enter') { e.preventDefault(); updateProduct(e, product.id); } };
+        nameInput.addEventListener('keydown', submitOnEnter);
+        document.getElementById('editProductPrice').addEventListener('keydown', submitOnEnter);
+        document.getElementById('editProductCategory').addEventListener('keydown', submitOnEnter);
+    }, 50);
+}
+
+function closeEditProductModal() {
+    const modal = document.getElementById('editProductModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+async function updateProduct(event, productId) {
+    event.preventDefault();
+    const nameInput = document.getElementById('editProductName');
+    const priceInput = document.getElementById('editProductPrice');
+    const categorySelect = document.getElementById('editProductCategory');
+    const updateBtn = document.getElementById('updateProductBtn');
+    
+    const name = nameInput.value.trim();
+    const price = parseFloat(priceInput.value);
+    const categoryId = parseInt(categorySelect.value);
+    
+    if (!name || isNaN(price) || price <= 0 || !categoryId) {
+        showNotification('❌ Preencha corretamente: nome, preço (>0) e categoria.', 'error');
+        return;
+    }
+    
+    const original = products.find(p => p.id === productId);
+    if (!original) {
+        showNotification('❌ Produto não encontrado!', 'error');
+        return;
+    }
+    
+    const hasChanges = name !== original.name || price !== original.price || categoryId !== original.categoryId;
+    if (!hasChanges) {
+        showNotification('ℹ️ Nenhuma alteração foi feita!', 'info');
+        closeEditProductModal();
+        return;
+    }
+    
+    updateBtn.disabled = true;
+    updateBtn.textContent = 'Atualizando...';
+    
+    try {
+        if (!supabase) throw new Error('Cliente Supabase não inicializado');
+        showNotification('🔄 Atualizando produto...', 'info');
+        
+        const { data, error } = await supabase
+            .from('product')
+            .update({ name, price, categoryId })
+            .eq('id', productId)
+            .select(`
+                id,
+                name,
+                price,
+                categoryId,
+                category:categoryId(id, name, icon)
+            `);
+        
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('Nenhum dado retornado do Supabase');
+        
+        const updated = data[0];
+        const processed = {
+            id: updated.id,
+            name: updated.name,
+            price: updated.price,
+            categoryId: updated.categoryId,
+            category: updated.category?.name || 'Sem Categoria',
+            icon: updated.category?.icon || 'fas fa-box'
+        };
+        
+        // Atualizar lista local
+        const idx = products.findIndex(p => p.id === productId);
+        if (idx !== -1) {
+            products[idx] = processed;
+        }
+        
+        // Reaplicar filtro atual
+        const currentSelected = categoriesGrid.querySelector('.category-card.selected');
+        if (currentSelected) {
+            const selectedName = currentSelected.querySelector('h3').textContent;
+            filterByCategory(selectedName);
+        } else {
+            filteredProducts = [...products];
+            renderProducts();
+        }
+        
+        closeEditProductModal();
+        showNotification(`✅ Produto "${name}" atualizado com sucesso!`, 'success');
+        updateFooter();
+    } catch (err) {
+        console.error('Erro ao atualizar produto:', err);
+        showNotification(`❌ Erro ao atualizar produto: ${err.message}`, 'error');
+    } finally {
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Atualizar Produto';
     }
 }
 
