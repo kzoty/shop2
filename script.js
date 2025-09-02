@@ -1121,20 +1121,17 @@ function renderProducts() {
             if (fullProduct) showEditProductModal(fullProduct);
         });
 
-        // Double‑tap (mobile)
-        let lastTap = 0;
-        productCard.addEventListener('touchend', (e) => {
-            const now = Date.now();
-            const delta = now - lastTap;
-            if (delta > 0 && delta < 500) {
-                e.preventDefault();
-                e.stopPropagation();
+        // Double‑tap (mobile) robusto
+        attachDoubleTap(productCard, (ev) => {
+            // Ignorar taps em botões internos (ex: adicionar à sacola)
+            const target = ev.target;
+            if (target.closest && target.closest('button')) return;
+            const fullProduct = products.find(p => p.id === product.id);
+            if (fullProduct) {
                 productCard.style.transform = 'scale(0.98)';
                 setTimeout(() => { productCard.style.transform = 'scale(1)'; }, 120);
-                const fullProduct = products.find(p => p.id === product.id);
-                if (fullProduct) showEditProductModal(fullProduct);
+                showEditProductModal(fullProduct);
             }
-            lastTap = now;
         });
         
         productsGrid.appendChild(productCard);
@@ -1375,6 +1372,58 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Helper: detectar double‑tap em mobile com prevenção de click fantasma
+function attachDoubleTap(element, callback, threshold = 300) {
+    let lastTouchTime = 0;
+    let touchTimeout = null;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    const clear = () => {
+        if (touchTimeout) {
+            clearTimeout(touchTimeout);
+            touchTimeout = null;
+        }
+    };
+
+    element.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 1) return; // ignorar multi-touch
+        const t = e.changedTouches[0];
+        lastTouchX = t.clientX;
+        lastTouchY = t.clientY;
+    }, { passive: true });
+
+    element.addEventListener('touchend', (e) => {
+        const now = Date.now();
+        const delta = now - lastTouchTime;
+        lastTouchTime = now;
+
+        // Impedir clique fantasma após touch
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (delta > 0 && delta <= threshold) {
+            clear();
+            callback(e);
+        } else {
+            clear();
+            // janela para possível segundo toque
+            touchTimeout = setTimeout(() => {
+                clear();
+            }, threshold);
+        }
+    });
+
+    // Bloquear click gerado por touch em alguns navegadores
+    element.addEventListener('click', (e) => {
+        // se veio logo após um touchend recente, cancelar
+        if (Date.now() - lastTouchTime < 350) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+}
 
 // Função para limpar carrinho (para desenvolvimento)
 function clearCart() {
