@@ -2,7 +2,7 @@
     "name": "Padaria Artesanal - PDV",
     "short_name": "Padaria PDV",
     "description": "Sistema PDV para Padaria Artesanal",
-    "start_url": "/",
+    "start_url": "/shop2/",
     "display": "standalone",
     "background_color": "#667eea",
     "theme_color": "#667eea",

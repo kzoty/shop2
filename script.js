@@ -22,6 +22,18 @@ let totalProducts = null;
 let cartItems = null;
 let cartValue = null;
 
+// Detectar o caminho base automaticamente
+const BASE_PATH = window.location.pathname.split('/').slice(0, -1).join('/') + '/';
+console.log('Base path detectado:', BASE_PATH);
+
+// Função para corrigir URLs relativas
+function getAbsolutePath(relativePath) {
+  if (relativePath.startsWith('http')) {
+    return relativePath;
+  }
+  return BASE_PATH + relativePath;
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', async function() {
     // Inicializar Supabase primeiro
