@@ -1090,7 +1090,7 @@ function renderProducts() {
                 <div class="product-category">${product.category}</div>
                 <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                 <button class="add-to-cart-btn" onclick="addToCart(${product.id})">
-                    Adicionar à Sacola
+                    ADD +
                 </button>
             </div>
         `;
