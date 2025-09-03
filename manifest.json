@@ -1,0 +1,23 @@
+{
+    "name": "Padaria Artesanal - PDV",
+    "short_name": "Padaria PDV",
+    "description": "Sistema PDV para Padaria Artesanal",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#667eea",
+    "theme_color": "#667eea",
+    "orientation": "portrait",
+    "icons": [
+      {
+        "src": "icon-192x192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+      },
+      {
+        "src": "icon-512x512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+      }
+    ],
+    "categories": ["business", "productivity"]
+  }

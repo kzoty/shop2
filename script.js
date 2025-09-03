@@ -2157,3 +2157,43 @@ document.addEventListener('DOMContentLoaded', function() {
     footer.appendChild(devButtons);
 });
 
+// Ajustar altura visual para mobile
+function adjustVisualHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+  }
+  
+// Executar no carregamento e redimensionamento
+window.addEventListener('load', adjustVisualHeight);
+window.addEventListener('resize', adjustVisualHeight);
+window.addEventListener('orientationchange', adjustVisualHeight);
+
+// Registrar Service Worker para PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js')
+        .then(function(registration) {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        })
+        .catch(function(error) {
+          console.log('ServiceWorker registration failed: ', error);
+        });
+    });
+  }
+  
+  // Detectar se está em modo standalone (tela cheia)
+  function isRunningStandalone() {
+    return (window.matchMedia('(display-mode: standalone)').matches) || 
+           (window.navigator.standalone) || 
+           (document.referrer.includes('android-app://'));
+  }
+  
+  // Ajustar interface para modo tela cheia
+  if (isRunningStandalone()) {
+    document.documentElement.style.setProperty('--safe-area-inset-top', 'env(safe-area-inset-top)');
+    document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
+    
+    // Adicionar classe para ajustes específicos
+    document.body.classList.add('pwa-mode');
+  }
+

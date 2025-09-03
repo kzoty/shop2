@@ -1531,3 +1531,75 @@ body {
         font-size: 1.3rem;
     }
 }
+
+/* Estilos para PWA e tela cheia */
+body.pwa-mode {
+    height: 100vh;
+    height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  body.pwa-mode .container {
+    min-height: 100vh;
+    min-height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  /* Prevenir zoom em inputs no iOS */
+  @media screen and (max-width: 768px) {
+    input, select, textarea {
+      font-size: 16px !important; /* Previne zoom no iOS */
+    }
+  }
+  
+  /* Ajustar para notch e áreas seguras */
+  @supports(padding: max(0px)) {
+    .header, .footer {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+    
+    .header {
+      padding-top: max(20px, env(safe-area-inset-top));
+    }
+    
+    .footer {
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+  }
+  
+  /* Melhorar toque em dispositivos móveis */
+  @media (max-width: 768px) {
+    .category-card, .product-card {
+      min-height: 44px; /* Tamanho mínimo de toque recomendado pela Apple */
+    }
+    
+    button, .add-to-cart-btn, .search-btn {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+  
+  /* Prevenir seleção de texto acidental */
+  .category-card, .product-card, button {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Ajustar viewport para mobile */
+  @media (max-width: 480px) {
+    .container {
+      padding: 10px;
+    }
+    
+    .header {
+      padding: 15px;
+      border-radius: 15px;
+    }
+    
+    .footer {
+      padding: 20px;
+      border-radius: 15px;
+    }
+  }
