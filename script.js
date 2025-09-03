@@ -1075,11 +1075,15 @@ function renderProducts() {
         const cartItem = cart.find(item => item.id === product.id);
         const quantity = cartItem ? cartItem.quantity : 0;
         
+        // Encontrar a categoria do produto para obter a cor
+        const productCategory = categories.find(cat => cat.id === product.categoryId);
+        const categoryColor = productCategory ? productCategory.color : '#667eea'; // Fallback para cor padrão
+
         productCard.innerHTML = `
             <button class="card-edit-btn" title="Editar" type="button">
                 <i class="fas fa-pen"></i>
             </button>
-            <div class="product-image">
+            <div class="product-image" style="background: ${categoryColor}">
                 <i class="${product.icon}"></i>
             </div>
             <div class="product-info">
@@ -1244,6 +1248,21 @@ function updateProductCounter(productId) {
             }
         }
     }
+}
+
+// Função para determinar cor do texto baseada no background (contraste)
+function getContrastTextColor(backgroundColor) {
+    // Converte hex para RGB
+    const hex = backgroundColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calcula luminosidade
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Retorna branco para fundos escuros, preto para claros
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
 // Mostrar notificação
