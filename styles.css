@@ -661,7 +661,7 @@ body {
 .quantity-display {
     background: #667eea;
     color: white;
-    padding: 5px 12px;
+    padding: 5px 20px;
     border-radius: 15px;
     font-weight: 700;
     min-width: 30px;
@@ -673,11 +673,12 @@ body {
     color: white;
     border: none;
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 35px;
+    height: 35px;
     font-size: 1.2rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    margin-left: 20px;
 }
 
 .remove-item-btn:hover {

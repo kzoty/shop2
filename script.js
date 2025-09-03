@@ -1078,12 +1078,13 @@ function renderProducts() {
         // Encontrar a categoria do produto para obter a cor
         const productCategory = categories.find(cat => cat.id === product.categoryId);
         const categoryColor = productCategory ? productCategory.color : '#667eea'; // Fallback para cor padrão
-
+        const textColor = getContrastTextColor(categoryColor);
+        
         productCard.innerHTML = `
             <button class="card-edit-btn" title="Editar" type="button">
                 <i class="fas fa-pen"></i>
             </button>
-            <div class="product-image" style="background: ${categoryColor}">
+            <div class="product-image" style="background: ${categoryColor}; color: ${textColor}">
                 <i class="${product.icon}"></i>
             </div>
             <div class="product-info">
@@ -1114,6 +1115,43 @@ function renderProducts() {
         
         productsGrid.appendChild(productCard);
     });
+}
+
+// Função para determinar cor do texto baseada no background (contraste)
+function getContrastTextColor(backgroundColor) {
+    // Se for um gradiente ou cor não hexadecimal, retorna branco como padrão
+    if (!backgroundColor || backgroundColor.includes('gradient') || !backgroundColor.startsWith('#')) {
+        return '#FFFFFF';
+    }
+    
+    try {
+        // Converte hex para RGB
+        const hex = backgroundColor.replace('#', '');
+        let r, g, b;
+        
+        if (hex.length === 3) {
+            // Formato shorthand #RGB
+            r = parseInt(hex[0] + hex[0], 16);
+            g = parseInt(hex[1] + hex[1], 16);
+            b = parseInt(hex[2] + hex[2], 16);
+        } else if (hex.length === 6) {
+            // Formato completo #RRGGBB
+            r = parseInt(hex.substr(0, 2), 16);
+            g = parseInt(hex.substr(2, 2), 16);
+            b = parseInt(hex.substr(4, 2), 16);
+        } else {
+            return '#FFFFFF'; // Formato inválido
+        }
+        
+        // Calcula luminosidade (fórmula de percepção humana)
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        
+        // Retorna branco para fundos escuros, preto para claros
+        return luminance > 0.5 ? '#000000' : '#FFFFFF';
+    } catch (error) {
+        console.error('Erro ao calcular contraste para cor:', backgroundColor, error);
+        return '#FFFFFF'; // Fallback para branco em caso de erro
+    }
 }
 
 // Função de busca
