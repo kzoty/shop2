@@ -6,6 +6,9 @@ const urlsToCache = [
   BASE_PATH + 'index.html',
   BASE_PATH + 'styles.css',
   BASE_PATH + 'script.js',
+  BASE_PATH + 'manifest.json',
+  BASE_PATH + 'android-launchericon-192-192.png',
+  BASE_PATH + 'android-launchericon-512-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
 ];
 

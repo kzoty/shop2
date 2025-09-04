@@ -2204,8 +2204,8 @@ if ('serviceWorker' in navigator) {
   if (isRunningStandalone()) {
     document.documentElement.style.setProperty('--safe-area-inset-top', 'env(safe-area-inset-top)');
     document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
-    
-    // Adicionar classe para ajustes específicos
     document.body.classList.add('pwa-mode');
-  }
+    // Forçar altura 100vh para Android Chrome
+    document.body.style.height = '100vh';
+}
 
