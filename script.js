@@ -1710,24 +1710,80 @@ function calculateChange() {
 }
 
 // Função para finalizar venda
-function finalizeSale() {
+async function finalizeSale() {
     const paymentMethod = window.selectedPaymentMethod;
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     if (paymentMethod === 'dinheiro') {
         const cashAmount = parseFloat(document.getElementById('cashAmount').value) || 0;
         const change = cashAmount - total;
-        
+
         showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Recebido: R$ ${cashAmount.toFixed(2)} | Troco: R$ ${change.toFixed(2)}`, 'success');
     } else {
         // Para outros métodos, mostrar confirmação
         const confirmPayment = confirm(`Confirma o pagamento de R$ ${total.toFixed(2)} em ${paymentMethod.toUpperCase()}?`);
         if (!confirmPayment) return;
-        
+
         showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Método: ${paymentMethod.toUpperCase()}`, 'success');
     }
-    
-    // Limpar carrinho e fechar modal
+
+    // Salvar venda no banco de dados
+    try {
+        if (!supabase) {
+            throw new Error('Cliente Supabase não inicializado');
+        }
+
+        showNotification('💾 Salvando venda no banco de dados...', 'info');
+
+        // 1. Salvar venda principal na tabela 'sales'
+        const { data: saleData, error: saleError } = await supabase
+            .from('sales')
+            .insert([{
+                total_value: total,
+                payment_method: paymentMethod
+            }])
+            .select()
+            .single();
+
+        if (saleError) {
+            throw new Error(`Erro ao salvar venda: ${saleError.message}`);
+        }
+
+        if (!saleData || !saleData.id) {
+            throw new Error('ID da venda não foi retornado');
+        }
+
+        // 2. Salvar itens da venda na tabela 'sale_items'
+        const saleItems = cart.map(item => ({
+            sale_id: saleData.id,
+            category_id: item.categoryId,
+            category_name: item.category,
+            product_id: item.id,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.price,
+            subtotal: item.price * item.quantity
+        }));
+
+        const { error: itemsError } = await supabase
+            .from('sale_items')
+            .insert(saleItems);
+
+        if (itemsError) {
+            throw new Error(`Erro ao salvar itens da venda: ${itemsError.message}`);
+        }
+
+        showNotification('✅ Venda salva com sucesso no banco de dados!', 'success');
+        console.log('Venda salva:', { sale: saleData, items: saleItems });
+
+    } catch (error) {
+        console.error('Erro ao salvar venda:', error);
+        showNotification(`❌ Erro ao salvar venda: ${error.message}`, 'error');
+        // Não limpar carrinho se houve erro no salvamento
+        return;
+    }
+
+    // Limpar carrinho e fechar modal apenas se o salvamento foi bem-sucedido
     cart = [];
     closeCheckoutModal();
     updateFooter();
@@ -2211,4 +2267,3 @@ if ('serviceWorker' in navigator) {
     // Forçar altura 100vh para Android Chrome
     document.body.style.height = '100vh';
 }
-
