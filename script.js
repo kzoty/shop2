@@ -12,6 +12,9 @@ let currentUser = null; // Usuário autenticado
 // Carrinho de compras
 let cart = [];
 
+// Vendas salvas (localStorage)
+let savedSales = [];
+
 // Elementos DOM - serão inicializados quando o DOM estiver carregado
 let categoriesGrid = null;
 let productsGrid = null;
@@ -704,21 +707,26 @@ document.addEventListener('click', function(event) {
     const editCategoryModal = document.getElementById('editCategoryModal');
     const editProductModal = document.getElementById('editProductModal');
     const productModal = document.getElementById('addProductModal');
-    
+    const saveSaleModal = document.getElementById('saveSaleModal');
+
     if (categoryModal && event.target === categoryModal) {
         closeAddCategoryModal();
     }
-    
+
     if (editCategoryModal && event.target === editCategoryModal) {
         closeEditCategoryModal();
     }
-    
+
     if (editProductModal && event.target === editProductModal) {
         closeEditProductModal();
     }
 
     if (productModal && event.target === productModal) {
         closeAddProductModal();
+    }
+
+    if (saveSaleModal && event.target === saveSaleModal) {
+        closeSaveSaleModal();
     }
 });
 
@@ -729,6 +737,7 @@ document.addEventListener('keydown', function(event) {
         const editCategoryModal = document.getElementById('editCategoryModal');
         const editProductModal = document.getElementById('editProductModal');
         const productModal = document.getElementById('addProductModal');
+        const saveSaleModal = document.getElementById('saveSaleModal');
         if (categoryModal) {
             closeAddCategoryModal();
         }
@@ -740,6 +749,9 @@ document.addEventListener('keydown', function(event) {
         }
         if (productModal) {
             closeAddProductModal();
+        }
+        if (saveSaleModal) {
+            closeSaveSaleModal();
         }
     }
 });
@@ -1468,6 +1480,268 @@ function attachDoubleTap(element, callback, threshold = 300) {
     }, true);
 }
 
+// =====================
+// Funções para Vendas Salvas
+// =====================
+
+// Carregar vendas salvas do localStorage
+function loadSavedSales() {
+    try {
+        const saved = localStorage.getItem('savedSales');
+        savedSales = saved ? JSON.parse(saved) : [];
+    } catch (error) {
+        console.error('Erro ao carregar vendas salvas:', error);
+        savedSales = [];
+    }
+}
+
+// Salvar vendas no localStorage
+function saveSalesToStorage() {
+    try {
+        localStorage.setItem('savedSales', JSON.stringify(savedSales));
+    } catch (error) {
+        console.error('Erro ao salvar vendas:', error);
+    }
+}
+
+// Mostrar modal para guardar venda
+function showSaveSaleModal() {
+    if (cart.length === 0) {
+        showNotification('Carrinho vazio! Adicione produtos antes de guardar.', 'error');
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'save-sale-modal';
+    modal.id = 'saveSaleModal';
+
+    // Sugerir nome baseado na data/hora atual
+    const now = new Date();
+    const suggestedName = `Mesa ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+    modal.innerHTML = `
+        <div class="save-sale-modal-content">
+            <div class="save-sale-header">
+                <h2>💾 Guardar Venda</h2>
+                <button class="close-save-sale-btn" onclick="closeSaveSaleModal()">×</button>
+            </div>
+
+            <form class="save-sale-form" onsubmit="saveSale(event)">
+                <div class="form-group">
+                    <label for="saleName">Nome da Venda:</label>
+                    <input type="text" id="saleName" value="${suggestedName}" placeholder="Ex: Mesa 1, Cliente João" required>
+                    <div class="input-help">
+                        Este nome será usado para identificar a venda guardada
+                    </div>
+                </div>
+
+                <div class="cart-preview">
+                    <h4>Itens no Carrinho:</h4>
+                    <div class="cart-preview-items">
+                        ${cart.map(item => `
+                            <div class="preview-item">
+                                <span>${item.name}</span>
+                                <span>${item.quantity}x R$ ${item.price.toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="cart-preview-total">
+                        <strong>Total: R$ ${cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</strong>
+                    </div>
+                </div>
+
+                <div class="save-sale-actions">
+                    <button type="button" class="cancel-btn" onclick="closeSaveSaleModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="save-sale-btn" id="saveSaleBtn">
+                        Guardar Venda
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Focar no campo de nome
+    setTimeout(() => {
+        document.getElementById('saleName').focus();
+    }, 100);
+}
+
+// Fechar modal de guardar venda
+function closeSaveSaleModal() {
+    const modal = document.getElementById('saveSaleModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// Salvar venda
+function saveSale(event) {
+    event.preventDefault();
+
+    const nameInput = document.getElementById('saleName');
+    const saveBtn = document.getElementById('saveSaleBtn');
+
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        showNotification('❌ Digite um nome para a venda!', 'error');
+        return;
+    }
+
+    // Verificar se já existe uma venda com esse nome
+    const existingSale = savedSales.find(sale => sale.name === name);
+    if (existingSale) {
+        if (!confirm(`Já existe uma venda com o nome "${name}". Deseja sobrescrever?`)) {
+            return;
+        }
+        // Remover venda existente
+        savedSales = savedSales.filter(sale => sale.name !== name);
+    }
+
+    // Desabilitar botão durante o salvamento
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
+    try {
+        // Criar objeto da venda salva
+        const savedSale = {
+            name: name,
+            cart: [...cart], // Copia profunda do carrinho
+            timestamp: new Date().toISOString(),
+            total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+        };
+
+        // Adicionar à lista de vendas salvas
+        savedSales.push(savedSale);
+
+        // Salvar no localStorage
+        saveSalesToStorage();
+
+        // Limpar carrinho
+        cart = [];
+
+        // Atualizar interface
+        updateFooter();
+        renderProducts();
+        renderSavedSales();
+
+        // Fechar modal
+        closeSaveSaleModal();
+
+        showNotification(`✅ Venda "${name}" guardada com sucesso!`, 'success');
+
+    } catch (error) {
+        console.error('Erro ao salvar venda:', error);
+        showNotification('❌ Erro ao guardar venda!', 'error');
+    } finally {
+        // Reabilitar botão
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Venda';
+    }
+}
+
+// Renderizar lista de vendas salvas
+function renderSavedSales() {
+    const savedSalesList = document.getElementById('savedSalesList');
+    const savedSalesContainer = document.getElementById('savedSalesContainer');
+
+    if (!savedSalesList || !savedSalesContainer) return;
+
+    if (savedSales.length === 0) {
+        savedSalesList.style.display = 'none';
+        return;
+    }
+
+    savedSalesList.style.display = 'block';
+    savedSalesContainer.innerHTML = '';
+
+    savedSales.forEach((sale, index) => {
+        const saleItem = document.createElement('div');
+        saleItem.className = 'saved-sale-item';
+        saleItem.onclick = () => loadSavedSale(index);
+
+        const date = new Date(sale.timestamp);
+        const timeString = date.toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        saleItem.innerHTML = `
+            <div class="saved-sale-info">
+                <span class="saved-sale-name">${sale.name}</span>
+                <span class="saved-sale-details">
+                    ${sale.cart.length} itens • R$ ${sale.total.toFixed(2)} • ${timeString}
+                </span>
+            </div>
+            <button class="remove-saved-sale-btn" onclick="removeSavedSale(event, ${index})" title="Remover">
+                ×
+            </button>
+        `;
+
+        savedSalesContainer.appendChild(saleItem);
+    });
+}
+
+// Carregar venda salva
+function loadSavedSale(index) {
+    if (cart.length > 0) {
+        showNotification('Existe uma venda em andamento. Finalize ou guarde antes de abrir uma venda salva.', 'error');
+        return;
+    }
+
+    const sale = savedSales[index];
+    if (!sale) {
+        showNotification('❌ Venda não encontrada!', 'error');
+        return;
+    }
+
+    // Carregar carrinho da venda salva
+    cart = [...sale.cart];
+
+    // Remover venda da lista de salvas
+    savedSales.splice(index, 1);
+    saveSalesToStorage();
+
+    // Atualizar interface
+    updateFooter();
+    renderProducts();
+    renderSavedSales();
+
+    showNotification(`✅ Venda "${sale.name}" carregada!`, 'success');
+}
+
+// Remover venda salva
+function removeSavedSale(event, index) {
+    event.stopPropagation();
+
+    const sale = savedSales[index];
+    if (!sale) return;
+
+    if (confirm(`Remover venda "${sale.name}"?`)) {
+        savedSales.splice(index, 1);
+        saveSalesToStorage();
+        renderSavedSales();
+        showNotification(`Venda "${sale.name}" removida!`, 'info');
+    }
+}
+
+// Limpar vendas salvas ao finalizar venda
+function clearSavedSaleOnFinalization() {
+    // Esta função será chamada quando uma venda for finalizada
+    // Por enquanto, não faz nada específico, mas pode ser expandida
+    // para limpar vendas salvas relacionadas se necessário
+}
+
+// Inicializar vendas salvas
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedSales();
+    renderSavedSales();
+});
+
 // Função para limpar carrinho (para desenvolvimento)
 function clearCart() {
     cart = [];
@@ -2192,6 +2466,20 @@ document.addEventListener('DOMContentLoaded', function() {
         width: 100%;
     `;
     
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Guardar Venda';
+    saveBtn.onclick = showSaveSaleModal;
+    saveBtn.style.cssText = `
+        padding: 8px 16px;
+        background: #f39c12;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-size: small;
+    `;
+
     const clearBtn = document.createElement('button');
     clearBtn.textContent = 'Limpar Carrinho';
     clearBtn.onclick = clearCart;
@@ -2205,7 +2493,7 @@ document.addEventListener('DOMContentLoaded', function() {
         font-size: 0.9rem;
         font-size: small;
     `;
-    
+
     const checkoutBtn = document.createElement('button');
     checkoutBtn.textContent = 'Finalizar Compra';
     checkoutBtn.onclick = checkout;
@@ -2220,9 +2508,10 @@ document.addEventListener('DOMContentLoaded', function() {
         width: -webkit-fill-available;
         font-size: larger;
     `;
-    
+
 
     
+    devButtons.appendChild(saveBtn);
     devButtons.appendChild(clearBtn);
     devButtons.appendChild(checkoutBtn);
     footer.appendChild(devButtons);
