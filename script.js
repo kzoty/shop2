@@ -2147,6 +2147,7 @@ document.addEventListener('DOMContentLoaded', function() {
         border-radius: 8px;
         cursor: pointer;
         font-size: 0.9rem;
+        font-size: small;
     `;
     
     const checkoutBtn = document.createElement('button');
@@ -2160,6 +2161,8 @@ document.addEventListener('DOMContentLoaded', function() {
         border-radius: 8px;
         cursor: pointer;
         font-size: 0.9rem;
+        width: -webkit-fill-available;
+        font-size: larger;
     `;
     
 
