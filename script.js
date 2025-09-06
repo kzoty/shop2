@@ -15,6 +15,9 @@ let cart = [];
 // Vendas salvas (localStorage)
 let savedSales = [];
 
+// Rastreamento da venda atual (para preservar nome ao re-salvar)
+let currentSaleName = null;
+
 // Elementos DOM - serão inicializados quando o DOM estiver carregado
 let categoriesGrid = null;
 let productsGrid = null;
@@ -1515,9 +1518,16 @@ function showSaveSaleModal() {
     modal.className = 'save-sale-modal';
     modal.id = 'saveSaleModal';
 
-    // Sugerir nome baseado na data/hora atual
-    const now = new Date();
-    const suggestedName = `Mesa ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    // Verificar se o carrinho atual veio de uma venda salva
+    let defaultName = '';
+    if (currentSaleName) {
+        // Se veio de uma venda salva, usar o nome original
+        defaultName = currentSaleName;
+    } else {
+        // Se é um carrinho novo, sugerir nome baseado na data/hora atual
+        const now = new Date();
+        defaultName = `Mesa ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    }
 
     modal.innerHTML = `
         <div class="save-sale-modal-content">
@@ -1529,7 +1539,7 @@ function showSaveSaleModal() {
             <form class="save-sale-form" onsubmit="saveSale(event)">
                 <div class="form-group">
                     <label for="saleName">Nome da Venda:</label>
-                    <input type="text" id="saleName" value="${suggestedName}" placeholder="Ex: Mesa 1, Cliente João" required>
+                    <input type="text" id="saleName" value="${defaultName}" placeholder="Ex: Mesa 1, Cliente João" required>
                     <div class="input-help">
                         Este nome será usado para identificar a venda guardada
                     </div>
@@ -1701,6 +1711,9 @@ function loadSavedSale(index) {
 
     // Carregar carrinho da venda salva
     cart = [...sale.cart];
+
+    // Definir o nome da venda atual para preservar ao re-salvar
+    currentSaleName = sale.name;
 
     // Remover venda da lista de salvas
     savedSales.splice(index, 1);
