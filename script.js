@@ -2354,6 +2354,12 @@ function showEditProductModal(product) {
                     <button type="button" class="cancel-btn" onclick="closeEditProductModal()">Cancelar</button>
                     <button type="submit" class="save-category-btn" id="updateProductBtn">Atualizar Produto</button>
                 </div>
+
+                <div class="delete-product-section" style="margin-top: 40px; text-align: center;">
+                    <button type="button" class="delete-product-btn" id="deleteProductBtn" onclick="confirmDeleteProduct(${product.id})">
+                        <i class="fas fa-trash"></i> Excluir Produto
+                    </button>
+                </div>
             </form>
         </div>
     `;
@@ -2383,36 +2389,36 @@ async function updateProduct(event, productId) {
     const priceInput = document.getElementById('editProductPrice');
     const categorySelect = document.getElementById('editProductCategory');
     const updateBtn = document.getElementById('updateProductBtn');
-    
+
     const name = nameInput.value.trim();
     const price = parseFloat(priceInput.value);
     const categoryId = parseInt(categorySelect.value);
-    
+
     if (!name || isNaN(price) || price <= 0 || !categoryId) {
         showNotification('❌ Preencha corretamente: nome, preço (>0) e categoria.', 'error');
         return;
     }
-    
+
     const original = products.find(p => p.id === productId);
     if (!original) {
         showNotification('❌ Produto não encontrado!', 'error');
         return;
     }
-    
+
     const hasChanges = name !== original.name || price !== original.price || categoryId !== original.categoryId;
     if (!hasChanges) {
         showNotification('ℹ️ Nenhuma alteração foi feita!', 'info');
         closeEditProductModal();
         return;
     }
-    
+
     updateBtn.disabled = true;
     updateBtn.textContent = 'Atualizando...';
-    
+
     try {
         if (!supabase) throw new Error('Cliente Supabase não inicializado');
         showNotification('🔄 Atualizando produto...', 'info');
-        
+
         const { data, error } = await supabase
             .from('product')
             .update({ name, price, categoryId })
@@ -2424,10 +2430,10 @@ async function updateProduct(event, productId) {
                 categoryId,
                 category:categoryId(id, name, icon)
             `);
-        
+
         if (error) throw error;
         if (!data || data.length === 0) throw new Error('Nenhum dado retornado do Supabase');
-        
+
         const updated = data[0];
         const processed = {
             id: updated.id,
@@ -2437,13 +2443,13 @@ async function updateProduct(event, productId) {
             category: updated.category?.name || 'Sem Categoria',
             icon: updated.category?.icon || 'fas fa-box'
         };
-        
+
         // Atualizar lista local
         const idx = products.findIndex(p => p.id === productId);
         if (idx !== -1) {
             products[idx] = processed;
         }
-        
+
         // Reaplicar filtro atual
         const currentSelected = categoriesGrid.querySelector('.category-card.selected');
         if (currentSelected) {
@@ -2453,7 +2459,7 @@ async function updateProduct(event, productId) {
             filteredProducts = [...products];
             renderProducts();
         }
-        
+
         closeEditProductModal();
         showNotification(`✅ Produto "${name}" atualizado com sucesso!`, 'success');
         updateFooter();
@@ -2463,6 +2469,90 @@ async function updateProduct(event, productId) {
     } finally {
         updateBtn.disabled = false;
         updateBtn.textContent = 'Atualizar Produto';
+    }
+}
+
+// Função para confirmar exclusão do produto
+function confirmDeleteProduct(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+        showNotification('❌ Produto não encontrado!', 'error');
+        return;
+    }
+
+    const confirmed = confirm(`Exclusão é irreversível. O produto não poderá estar no seu carrinho de compras para excluir nem Guardado.\n\nDeseja realmente excluir o produto "${product.name}"?`);
+
+    if (confirmed) {
+        deleteProduct(productId);
+    }
+}
+
+// Função para excluir produto
+async function deleteProduct(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product) {
+        showNotification('❌ Produto não encontrado!', 'error');
+        return;
+    }
+
+    // Validação: verificar se produto está no carrinho
+    const isInCart = cart.some(item => item.id === productId);
+    if (isInCart) {
+        showNotification('❌ Não é possível excluir o produto porque ele está no carrinho de compras!', 'error');
+        return;
+    }
+
+    // Validação: verificar se produto está em vendas salvas
+    const isInSavedSales = savedSales.some(sale =>
+        sale.cart.some(item => item.id === productId)
+    );
+    if (isInSavedSales) {
+        showNotification('❌ Não é possível excluir o produto porque ele está em vendas guardadas!', 'error');
+        return;
+    }
+
+    // Se passou nas validações, prosseguir com a exclusão
+    const deleteBtn = document.getElementById('deleteProductBtn');
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    }
+
+    try {
+        if (!supabase) throw new Error('Cliente Supabase não inicializado');
+
+        showNotification('🔄 Excluindo produto...', 'info');
+
+        const { error } = await supabase
+            .from('product')
+            .delete()
+            .eq('id', productId);
+
+        if (error) throw error;
+
+        // Remover da lista local
+        products = products.filter(p => p.id !== productId);
+        filteredProducts = filteredProducts.filter(p => p.id !== productId);
+
+        // Re-renderizar produtos
+        renderProducts();
+
+        // Fechar modal
+        closeEditProductModal();
+
+        // Atualizar footer
+        updateFooter();
+
+        showNotification(`✅ Produto "${product.name}" excluído com sucesso!`, 'success');
+
+    } catch (err) {
+        console.error('Erro ao excluir produto:', err);
+        showNotification(`❌ Erro ao excluir produto: ${err.message}`, 'error');
+    } finally {
+        if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i> Excluir Produto';
+        }
     }
 }
 
