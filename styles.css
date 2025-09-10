@@ -215,10 +215,10 @@ body {
 .card-edit-btn {
     position: absolute;
     top: 6px;
-    right: 6px;
+    left: 6px;
     width: 28px;
     height: 28px;
-    border-radius: 50%; 
+    border-radius: 50%;
     border: none;
     background: rgba(0,0,0,0.05);
     color: #555;
