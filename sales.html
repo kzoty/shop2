@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendas - Padaria Artesanal</title>
+    <link rel="stylesheet" href="sales.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <!-- Meta tags para PWA -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Padaria PDV">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+
+    <!-- Link para manifest -->
+    <link rel="manifest" href="/shop2/manifest.json">
+    <link rel="apple-touch-icon" href="/shop2/android-launchericon-192-192.png">
+
+    <!-- Para evitar zoom indesejado em inputs -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+<body>
+    <div class="container">
+        <!-- Header com filtros -->
+        <header class="header">
+            <div class="header-content">
+                <div class="bottom-nav">
+                    <a href="index.html" class="nav-item">
+                        <i class="fas fa-store"></i>
+                        <span>PDV</span>
+                    </a>
+                    <a href="sales.html" class="nav-item active">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Vendas</span>
+                    </a>
+                </div>
+                <h1>Vendas Registradas</h1>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters-section">
+                <div class="filter-group">
+                    <label for="dateFilter">Filtrar por Data:</label>
+                    <input type="date" id="dateFilter" onchange="filterSales()">
+                </div>
+                <button class="clear-filter-btn" onclick="clearFilters()">
+                    <i class="fas fa-times"></i>
+                    Limpar Filtro
+                </button>
+            </div>
+        </header>
+
+        <!-- Área principal -->
+        <main class="main-content">
+            <!-- Estatísticas rápidas -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <i class="fas fa-shopping-cart"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="totalSales">0</span>
+                            <span class="stat-label">Total de Vendas</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-dollar-sign"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="totalRevenue">R$ 0,00</span>
+                            <span class="stat-label">Receita Total</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <i class="fas fa-calendar-day"></i>
+                        <div class="stat-info">
+                            <span class="stat-number" id="todaySales">0</span>
+                            <span class="stat-label">Vendas Hoje</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Lista de vendas -->
+            <section class="sales-section">
+                <div class="sales-header">
+                    <h2>Histórico de Vendas</h2>
+                    <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Carregando vendas...
+                    </div>
+                </div>
+                <div class="sales-list" id="salesList">
+                    <!-- Vendas serão inseridas via JavaScript -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal de detalhes da venda -->
+    <div class="sale-details-modal" id="saleDetailsModal" style="display: none;">
+        <div class="sale-details-content">
+            <div class="sale-details-header">
+                <h2>Detalhes da Venda</h2>
+                <button class="close-details-btn" onclick="closeSaleDetails()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sale-details-body" id="saleDetailsBody">
+                <!-- Detalhes serão inseridos via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="sales.js"></script>
+</body>
+</html>

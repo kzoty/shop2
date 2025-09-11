@@ -1,0 +1,15 @@
+{
+  "name": "shop",
+  "version": "1.0.0",
+  "description": "Sistema de Ponto de Venda (PDV) desenvolvido para padarias artesanais, com interface moderna e funcionalidades essenciais.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0"
+  }
+}
