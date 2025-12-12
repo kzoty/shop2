@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Script Test</title>
+</head>
+<body>
+    <h1>Test Page</h1>
+    <div id="output"></div>
+
+    <script>
+        document.getElementById('output').innerHTML += 'Inline 1<br>';
+    </script>
+
+    <script src="data-store.js"></script>
+
+    <script>
+        document.getElementById('output').innerHTML += 'After data-store<br>';
+        document.getElementById('output').innerHTML += `typeof dataStore: ${typeof dataStore}<br>`;
+    </script>
+
+    <script src="auth.js"></script>
+
+    <script>
+        document.getElementById('output').innerHTML += 'After auth.js<br>';
+        document.getElementById('output').innerHTML += `typeof initAuth: ${typeof initAuth}<br>`;
+    </script>
+
+    <script src="script.js"></script>
+
+    <script>
+        document.getElementById('output').innerHTML += 'After script.js<br>';
+    </script>
+</body>
+</html>

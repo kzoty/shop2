@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .debug-console {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 400px;
+            max-height: 300px;
+            background: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-y: auto;
+            z-index: 10000;
+        }
+        .debug-console div {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="appContainer" class="container">
+        <header class="header">
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <input type="text" id="searchInput" placeholder="Buscar produtos..." class="search-input">
+                </div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <h1>Main App Content</h1>
+            <p>This should be hidden when not authenticated</p>
+        </main>
+
+        <footer class="footer">
+            <p>Footer</p>
+        </footer>
+    </div>
+
+    <div class="debug-console" id="debugConsole"></div>
+
+    <script>
+        const debugLog = [];
+        function debugMessage(msg) {
+            debugLog.push(msg);
+            const debug = document.getElementById('debugConsole');
+            const div = document.createElement('div');
+            div.textContent = msg;
+            debug.appendChild(div);
+            debug.scrollTop = debug.scrollHeight;
+            console.log(msg);
+        }
+        
+        debugMessage('🟢 Debug console started');
+        debugMessage(`📍 document.readyState: ${document.readyState}`);
+    </script>
+
+    <script src="data-store.js"></script>
+    <script>
+        debugMessage('✓ data-store.js loaded');
+        debugMessage(`  typeof dataStore: ${typeof dataStore}`);
+    </script>
+
+    <script src="auth.js"></script>
+    <script>
+        debugMessage('✓ auth.js loaded');
+        debugMessage(`  typeof initAuth: ${typeof initAuth}`);
+        debugMessage(`  typeof showAuthScreen: ${typeof showAuthScreen}`);
+    </script>
+
+    <script src="script.js"></script>
+    <script>
+        debugMessage('✓ script.js loaded');
+        debugMessage(`📍 document.readyState after script.js: ${document.readyState}`);
+        
+        // Wait a bit for initialization to run
+        setTimeout(() => {
+            debugMessage('--- Checking page state after init ---');
+            const authScreen = document.getElementById('authScreen');
+            const appContainer = document.getElementById('appContainer');
+            debugMessage(`authScreen exists: ${!!authScreen}`);
+            debugMessage(`appContainer exists: ${!!appContainer}`);
+            
+            if (authScreen) {
+                debugMessage(`authScreen.style.display: ${authScreen.style.display}`);
+                debugMessage(`authScreen visible: ${authScreen.offsetHeight > 0}`);
+            }
+            
+            if (appContainer) {
+                debugMessage(`appContainer.style.display: ${appContainer.style.display}`);
+                debugMessage(`appContainer visible: ${appContainer.offsetHeight > 0}`);
+            }
+            
+            debugMessage(`currentUser: ${currentUser ? currentUser.email : 'null'}`);
+        }, 500);
+    </script>
+</body>
+</html>

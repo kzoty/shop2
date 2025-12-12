@@ -1,0 +1,1 @@
+INSERT INTO "public"."authorized_users" ("id", "email", "name", "role", "is_active", "created_at", "last_login") VALUES ('77ccf5ff-fe74-41a7-b60d-195abc5d8f66', 'paesartesanaisfloripa@gmail.com', 'Administrador', 'admin', 'true', '2025-09-01 18:25:44.707441+00', '2025-09-01 19:15:42.272+00');

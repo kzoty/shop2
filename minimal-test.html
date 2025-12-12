@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Auth Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+        div { margin: 10px 0; padding: 10px; background: #252526; border-radius: 5px; }
+        .ok { color: #4ec94e; }
+        .err { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <h1>Minimal Auth Test</h1>
+    
+    <script>
+        console.log('[INLINE 1] Script loaded');
+        window.testLog = [];
+        
+        function logTest(msg) {
+            const div = document.createElement('div');
+            div.textContent = msg;
+            document.body.appendChild(div);
+            testLog.push(msg);
+            console.log(msg);
+        }
+        
+        logTest('Inline script 1 executed');
+    </script>
+    
+    <script src="data-store.js"></script>
+    <script>
+        logTest('✓ data-store.js loaded');
+        logTest(`  typeof dataStore: ${typeof dataStore}`);
+        logTest(`  dataStore.initialized: ${dataStore?.initialized}`);
+    </script>
+    
+    <script src="auth.js"></script>
+    <script>
+        logTest('✓ auth.js loaded');
+        logTest(`  typeof initAuth: ${typeof initAuth}`);
+        logTest(`  typeof showAuthScreen: ${typeof showAuthScreen}`);
+    </script>
+    
+    <script src="script.js"></script>
+    <script>
+        logTest('✓ script.js loaded');
+        logTest(`  document.readyState: ${document.readyState}`);
+        logTest(`  typeof categories: ${typeof categories}`);
+    </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            logTest('✓✓✓ DOMContentLoaded FIRED!');
+            logTest(`  Calling initAuth()...`);
+            try {
+                const result = await initAuth();
+                logTest(`  initAuth() returned: ${result}`);
+                
+                if (!result) {
+                    logTest('  User not authenticated - calling showAuthScreen()');
+                    showAuthScreen();
+                    logTest('  ✓ showAuthScreen() called');
+                    
+                    const authScreen = document.getElementById('authScreen');
+                    logTest(`  authScreen element exists: ${!!authScreen}`);
+                    if (authScreen) {
+                        logTest(`  authScreen.style.display: ${authScreen.style.display}`);
+                        logTest(`  authScreen visible on page: ${authScreen.offsetHeight > 0 ? 'YES' : 'NO'}`);
+                    }
+                } else {
+                    logTest('  User authenticated');
+                }
+            } catch (error) {
+                logTest(`  ✗ Error in initAuth: ${error.message}`);
+            }
+        });
+        
+        // If DOM is already loaded
+        if (document.readyState !== 'loading') {
+            logTest('⚠️  DOM already loaded - firing DOMContentLoaded manually');
+            document.dispatchEvent(new Event('DOMContentLoaded'));
+        }
+    </script>
+    
+    <script>
+        logTest('------ End of scripts ------');
+        logTest(`All tests recorded: ${testLog.length} messages`);
+    </script>
+</body>
+</html>

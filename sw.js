@@ -1,5 +1,5 @@
 const CACHE_NAME = 'padaria-pdv-v1';
-const BASE_PATH = '/shop2/';
+const BASE_PATH = '/';
 
 const urlsToCache = [
   BASE_PATH,

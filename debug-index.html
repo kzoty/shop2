@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Index</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        #debug { background: #252526; padding: 20px; border-radius: 5px; max-height: 400px; overflow-y: auto; }
+        .log-line { margin: 3px 0; padding: 3px; border-left: 2px solid #666; padding-left: 5px; }
+        .pass { border-left-color: #4ec94e; color: #4ec94e; }
+        .fail { border-left-color: #ff6b6b; color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Index Debug Console</h1>
+    <div id="debug"></div>
+
+    <script>
+        // Intercept console
+        const debugDiv = document.getElementById('debug');
+        const origLog = console.log;
+        const origError = console.error;
+        
+        function addLog(msg, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `log-line ${type === 'error' ? 'fail' : 'pass'}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            debugDiv.appendChild(line);
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            addLog(args.join(' '));
+            origLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            addLog(args.join(' '), 'error');
+            origError.apply(console, args);
+        };
+        
+        addLog('Debug console initialized');
+    </script>
+
+    <!-- Now load the actual app -->
+    <div id="appContainer" class="container" style="display: none; background: white; padding: 20px; margin-top: 20px; border-radius: 5px;">
+        <h2>App Container</h2>
+        <div id="categoriesGrid" style="display: flex; gap: 10px; margin: 10px 0;"></div>
+        <div id="productsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0;"></div>
+    </div>
+
+    <script src="data-store.js"></script>
+    <script>
+        addLog('data-store.js loaded');
+        addLog(`DataStore initialized: ${dataStore.initialized}`);
+    </script>
+    
+    <script src="auth.js"></script>
+    <script>
+        addLog('auth.js loaded');
+        addLog(`currentUser: ${currentUser}`);
+    </script>
+    
+    <script src="script.js"></script>
+    <script>
+        addLog('script.js loaded');
+        addLog(`categories array: ${Array.isArray(categories)} (length: ${categories.length})`);
+        
+        // Trigger the actual flow
+        (async () => {
+            try {
+                addLog('Starting initialization...');
+                
+                addLog('Calling initAuth()...');
+                const isAuth = await initAuth();
+                addLog(`initAuth() result: ${isAuth}`);
+                addLog(`dataStore.initialized: ${dataStore.initialized}`);
+                addLog(`categories loaded: ${dataStore.getCategories().length}`);
+                addLog(`products loaded: ${dataStore.getProducts().length}`);
+                
+                if (!isAuth) {
+                    addLog('User not authenticated, showing login');
+                    showAuthScreen();
+                    const authScreen = document.getElementById('authScreen');
+                    addLog(`authScreen created: ${authScreen ? 'yes' : 'no'}`);
+                    if (authScreen) {
+                        addLog(`authScreen display: ${authScreen.style.display}`);
+                    }
+                } else {
+                    addLog('User authenticated, initializing app');
+                    await initializeApp();
+                    addLog(`categories: ${categories.length}, products: ${products.length}`);
+                }
+                
+                addLog('✅ Initialization complete');
+            } catch (e) {
+                addLog(`❌ ERROR: ${e.message}`, 'error');
+                addLog(e.stack, 'error');
+            }
+        })();
+    </script>
+</body>
+</html>

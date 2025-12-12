@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check localStorage</title>
+</head>
+<body>
+    <h1>Check localStorage</h1>
+    <pre id="log"></pre>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function log_msg(msg) {
+            console.log(msg);
+            log.textContent += msg + '\n';
+        }
+        
+        // Check localStorage
+        log_msg('localStorage items:');
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const value = localStorage.getItem(key);
+            const size = (value ? value.length : 0);
+            log_msg(`  ${key}: ${size} bytes`);
+        }
+        
+        // Check specific key
+        const pdvData = localStorage.getItem('padaria_pdv_data');
+        if (pdvData) {
+            log_msg('\npadaria_pdv_data exists:');
+            try {
+                const data = JSON.parse(pdvData);
+                log_msg(`  categories: ${data.categories ? data.categories.length : 0}`);
+                log_msg(`  products: ${data.products ? data.products.length : 0}`);
+            } catch (e) {
+                log_msg(`  ERROR: ${e.message}`);
+            }
+        } else {
+            log_msg('\npadaria_pdv_data NOT found in localStorage');
+            log_msg('Will need to load from data.json');
+        }
+    </script>
+</body>
+</html>

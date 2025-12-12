@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Script Load Test</h1>
+    <p id="status">Initial</p>
+
+    <script>
+        document.getElementById('status').textContent = 'Inline script executed';
+    </script>
+
+    <script src="data-store.js" onload="document.getElementById('status').textContent += ' - data-store loaded'" onerror="document.getElementById('status').textContent += ' - data-store FAILED'"></script>
+
+    <script>
+        setTimeout(() => {
+            document.getElementById('status').textContent += ' - timeout callback';
+        }, 100);
+    </script>
+</body>
+</html>

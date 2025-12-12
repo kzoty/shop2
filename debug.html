@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug PDV System</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #444; border-radius: 5px; }
+        .pass { background: #1e3d1e; color: #4ec94e; }
+        .fail { background: #3d1e1e; color: #ff6b6b; }
+        .pending { background: #3d3d1e; color: #ffdd33; }
+        h2 { color: #fff; margin-top: 20px; }
+        pre { background: #252526; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug PDV System</h1>
+    <div id="output"></div>
+
+    <script src="data-store.js"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        const log = {
+            tests: [],
+            
+            test(name, fn) {
+                const div = document.createElement('div');
+                try {
+                    fn();
+                    div.className = 'test pass';
+                    div.innerHTML = `✅ ${name}`;
+                    this.tests.push({name, pass: true});
+                } catch (e) {
+                    div.className = 'test fail';
+                    div.innerHTML = `❌ ${name}<br><pre>${e.message}</pre>`;
+                    this.tests.push({name, pass: false, error: e.message});
+                }
+                document.getElementById('output').appendChild(div);
+            },
+            
+            render() {
+                const summary = document.createElement('div');
+                const passed = this.tests.filter(t => t.pass).length;
+                const total = this.tests.length;
+                summary.innerHTML = `<h2>📊 Resumo: ${passed}/${total} testes passaram</h2>`;
+                document.getElementById('output').insertBefore(summary, document.getElementById('output').firstChild);
+            }
+        };
+        
+        // Testes
+        log.test('DataStore class exists', () => {
+            if (!window.DataStore) throw new Error('DataStore class not found');
+        });
+        
+        log.test('DataStore instance exists', () => {
+            if (!window.dataStore) throw new Error('dataStore instance not found');
+        });
+        
+        log.test('DataStore has initialized property', () => {
+            if (dataStore.initialized === undefined) throw new Error('initialized property missing');
+        });
+        
+        log.test('DataStore.loadData() method exists', () => {
+            if (typeof dataStore.loadData !== 'function') throw new Error('loadData is not a function');
+        });
+        
+        log.test('DataStore.getCategories() method exists', () => {
+            if (typeof dataStore.getCategories !== 'function') throw new Error('getCategories is not a function');
+        });
+        
+        log.test('currentUser global variable exists', () => {
+            if (window.currentUser === undefined) throw new Error('currentUser not defined');
+        });
+        
+        log.test('initAuth() function exists', () => {
+            if (typeof initAuth !== 'function') throw new Error('initAuth is not a function');
+        });
+        
+        log.test('showAuthScreen() function exists', () => {
+            if (typeof showAuthScreen !== 'function') throw new Error('showAuthScreen is not a function');
+        });
+        
+        log.test('DOM ready - check appContainer', () => {
+            if (!document.getElementById('appContainer')) throw new Error('appContainer not found in DOM');
+        });
+        
+        log.test('DOM ready - check categoriesGrid', () => {
+            if (!document.getElementById('categoriesGrid')) throw new Error('categoriesGrid not found');
+        });
+        
+        // Async tests
+        (async () => {
+            log.test('Initialize DataStore', async () => {
+                if (dataStore.initialized) {
+                    console.log('DataStore already initialized');
+                    return;
+                }
+                await dataStore.initialize();
+                if (!dataStore.initialized) throw new Error('DataStore initialization failed');
+            });
+            
+            log.test('Load categories from DataStore', () => {
+                const cats = dataStore.getCategories();
+                if (!Array.isArray(cats)) throw new Error('Categories is not an array');
+                if (cats.length === 0) throw new Error('No categories loaded');
+                console.log(`✓ Loaded ${cats.length} categories`);
+            });
+            
+            log.test('Load products from DataStore', () => {
+                const prods = dataStore.getProducts();
+                if (!Array.isArray(prods)) throw new Error('Products is not an array');
+                if (prods.length === 0) throw new Error('No products loaded');
+                console.log(`✓ Loaded ${prods.length} products`);
+            });
+            
+            log.test('Load user by email', () => {
+                const user = dataStore.getUserByEmail('paesartesanaisfloripa@gmail.com');
+                if (!user) throw new Error('User not found');
+                console.log(`✓ Found user: ${user.email}`);
+            });
+            
+            log.test('Verify password hash', async () => {
+                const user = dataStore.getUserByEmail('paesartesanaisfloripa@gmail.com');
+                const isValid = await dataStore.verifyPassword('P@f2005', user.password_hash);
+                if (!isValid) throw new Error('Password verification failed');
+                console.log(`✓ Password verified correctly`);
+            });
+            
+            log.render();
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test DataStore</title>
+</head>
+<body>
+    <h1>Test DataStore Initialization</h1>
+    <div id="output" style="font-family: monospace; padding: 20px; background: #f0f0f0; border-radius: 5px;"></div>
+    
+    <script src="data-store.js"></script>
+    <script>
+        async function test() {
+            const output = document.getElementById('output');
+            
+            function log(message) {
+                console.log(message);
+                output.innerHTML += '<p>' + message + '</p>';
+            }
+            
+            try {
+                log('Starting DataStore Test...');
+                log('1. DataStore instance created: ' + (dataStore ? '✅ OK' : '❌ FAIL'));
+                
+                log('2. Initializing dataStore...');
+                await dataStore.initialize();
+                log('3. DataStore initialized: ' + (dataStore.initialized ? '✅ OK' : '❌ FAIL'));
+                
+                const categories = dataStore.getCategories();
+                log('4. Categories loaded: ' + (categories.length > 0 ? '✅ OK (' + categories.length + ')' : '❌ FAIL'));
+                
+                const products = dataStore.getProducts();
+                log('5. Products loaded: ' + (products.length > 0 ? '✅ OK (' + products.length + ')' : '❌ FAIL'));
+                
+                const user = dataStore.getUserByEmail('paesartesanaisfloripa@gmail.com');
+                log('6. User found: ' + (user ? '✅ OK' : '❌ FAIL'));
+                
+                if (user) {
+                    const isValid = await dataStore.verifyPassword('P@f2005', user.password_hash);
+                    log('7. Password verification: ' + (isValid ? '✅ OK' : '❌ FAIL'));
+                }
+                
+                log('');
+                log('All tests passed! ✅');
+                
+            } catch (error) {
+                log('❌ ERROR: ' + error.message);
+                console.error(error);
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth.js Check</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #0f0; }
+        div { margin: 10px 0; padding: 10px; background: #222; }
+        .ok { color: #0f0; }
+        .err { color: #f00; }
+        h1 { color: #0f0; }
+    </style>
+</head>
+<body>
+    <h1>Auth.js Diagnostic</h1>
+    <div id="log"></div>
+
+    <script>
+        function log(msg, status = 'ok') {
+            const div = document.createElement('div');
+            div.className = status;
+            div.textContent = msg;
+            document.getElementById('log').appendChild(div);
+            console.log(msg);
+        }
+        
+        log('✓ This inline script loaded');
+        log(`document.readyState at start: ${document.readyState}`);
+        log(`Number of <script> tags in HTML: ${document.querySelectorAll('script').length}`);
+    </script>
+
+    <script src="data-store.js" onerror="log('✗ data-store.js failed to load', 'err')"></script>
+    <script>
+        log('✓ After data-store.js load');
+        log(`typeof DataStore: ${typeof DataStore}`);
+        log(`typeof dataStore: ${typeof dataStore}`);
+    </script>
+
+    <script src="auth.js" onerror="log('✗ auth.js failed to load!', 'err')"></script>
+    <script>
+        log('✓ After auth.js load');
+        log(`typeof initAuth: ${typeof initAuth}`);
+        log(`typeof showAuthScreen: ${typeof showAuthScreen}`);
+        
+        if (typeof initAuth !== 'function') {
+            log('✗✗✗ initAuth is NOT defined!', 'err');
+        } else {
+            log('✓✓✓ initAuth is properly defined!');
+        }
+    </script>
+
+    <script src="script.js" onerror="log('✗ script.js failed to load', 'err')"></script>
+    <script>
+        log('✓ After script.js load');
+        log(`document.readyState at end: ${document.readyState}`);
+    </script>
+</body>
+</html>

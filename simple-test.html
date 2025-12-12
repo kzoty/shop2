@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Test</title>
+</head>
+<body>
+    <h1>Simple System Test</h1>
+    <pre id="log"></pre>
+
+    <script src="data-store.js"></script>
+    <script>
+        const log = document.getElementById('log');
+        
+        function log_msg(msg) {
+            console.log(msg);
+            log.textContent += msg + '\n';
+        }
+        
+        log_msg('1. Checking dataStore...');
+        log_msg('   dataStore exists: ' + (typeof dataStore !== 'undefined'));
+        log_msg('   dataStore.data: ' + (dataStore.data ? 'has data' : 'null'));
+        log_msg('   dataStore.initialized: ' + dataStore.initialized);
+        
+        log_msg('\n2. Initializing DataStore...');
+        (async () => {
+            try {
+                await dataStore.initialize();
+                log_msg('   ✓ Initialized successfully');
+                log_msg('   dataStore.initialized: ' + dataStore.initialized);
+                
+                const cats = dataStore.getCategories();
+                log_msg('\n3. Categories:');
+                log_msg('   Count: ' + cats.length);
+                cats.slice(0, 3).forEach(c => {
+                    log_msg('   - ' + c.name);
+                });
+                
+                const prods = dataStore.getProducts();
+                log_msg('\n4. Products:');
+                log_msg('   Count: ' + prods.length);
+                prods.slice(0, 3).forEach(p => {
+                    log_msg('   - ' + p.name + ' (' + p.price + ')');
+                });
+                
+            } catch (e) {
+                log_msg('   ✗ Error: ' + e.message);
+            }
+        })();
+    </script>
+</body>
+</html>

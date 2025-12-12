@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trace Execution</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+        #trace { background: #252526; padding: 15px; border-radius: 5px; max-height: 600px; overflow-y: auto; font-size: 12px; }
+        .step { margin: 5px 0; padding: 5px; border-left: 3px solid; }
+        .step-start { border-left-color: #ffaa00; color: #ffaa00; }
+        .step-ok { border-left-color: #4ec94e; color: #4ec94e; }
+        .step-err { border-left-color: #ff6b6b; color: #ff6b6b; }
+        h1 { color: #fff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Execution Trace</h1>
+    <div id="trace"></div>
+
+    <script>
+        const traceDiv = document.getElementById('trace');
+        
+        function trace(msg, type = 'start') {
+            const div = document.createElement('div');
+            div.className = `step step-${type}`;
+            const time = new Date().toLocaleTimeString('pt-BR');
+            div.textContent = `[${time}] ${msg}`;
+            traceDiv.appendChild(div);
+            traceDiv.scrollTop = traceDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${msg}`);
+        }
+        
+        trace('Script starting', 'start');
+        
+        trace('Checking global variables...', 'start');
+        trace(`  - window.DataStore: ${typeof DataStore}`, DataStore ? 'ok' : 'err');
+        trace(`  - window.dataStore: ${typeof dataStore}`, dataStore ? 'ok' : 'err');
+        trace(`  - window.currentUser: ${currentUser}`, !currentUser ? 'ok' : 'ok');
+        
+        trace('Loading data-store.js...', 'start');
+    </script>
+
+    <script src="data-store.js"></script>
+    
+    <script>
+        trace('✓ data-store.js loaded', 'ok');
+        trace(`  - dataStore.initialized: ${dataStore.initialized}`, 'ok');
+        trace(`  - dataStore.data: ${dataStore.data ? 'has data' : 'null'}`, dataStore.data ? 'ok' : 'err');
+    </script>
+
+    <script src="auth.js"></script>
+    
+    <script>
+        trace('✓ auth.js loaded', 'ok');
+        trace(`  - typeof initAuth: ${typeof initAuth}`, typeof initAuth === 'function' ? 'ok' : 'err');
+        trace(`  - typeof showAuthScreen: ${typeof showAuthScreen}`, typeof showAuthScreen === 'function' ? 'ok' : 'err');
+        trace(`  - typeof createAuthScreen: ${typeof createAuthScreen}`, typeof createAuthScreen === 'function' ? 'ok' : 'err');
+        trace(`  - typeof handleLogin: ${typeof handleLogin}`, typeof handleLogin === 'function' ? 'ok' : 'err');
+        trace(`  - currentUser: ${currentUser}`, 'ok');
+    </script>
+
+    <script src="script.js"></script>
+    
+    <script>
+        trace('✓ script.js loaded', 'ok');
+        trace(`  - typeof loadCategoriesFromLocalStorage: ${typeof loadCategoriesFromLocalStorage}`, 'ok');
+        
+        trace('Checking DOMContentLoaded listener...', 'start');
+        if (document.readyState === 'loading') {
+            trace('DOM still loading, waiting for DOMContentLoaded...', 'start');
+        } else {
+            trace('DOM already loaded!', 'ok');
+            trace('Manually triggering initialization...', 'start');
+        }
+    </script>
+
+    <script>
+        // Manual flow if DOM is already loaded
+        (async () => {
+            if (document.readyState !== 'loading') {
+                trace('Running initialization manually...', 'start');
+                try {
+                    trace('Initializing DataStore...', 'start');
+                    await dataStore.initialize();
+                    trace(`✓ DataStore initialized: ${dataStore.initialized}`, 'ok');
+                    
+                    trace('Calling initAuth()...', 'start');
+                    const isAuth = await initAuth();
+                    trace(`✓ initAuth() returned: ${isAuth}`, isAuth ? 'ok' : 'ok');
+                    
+                    if (!isAuth) {
+                        trace('User not authenticated', 'start');
+                        trace('Calling showAuthScreen()...', 'start');
+                        showAuthScreen();
+                        
+                        const authScreen = document.getElementById('authScreen');
+                        trace(`✓ authScreen created: ${authScreen ? 'yes' : 'no'}`, authScreen ? 'ok' : 'err');
+                        
+                        if (authScreen) {
+                            trace(`  - display style: ${authScreen.style.display}`, 'ok');
+                            trace(`  - contains form: ${authScreen.querySelector('form') ? 'yes' : 'no'}`, 'ok');
+                        }
+                    } else {
+                        trace('User authenticated', 'ok');
+                    }
+                    
+                    trace('✓ Initialization complete', 'ok');
+                } catch (e) {
+                    trace(`✗ Error: ${e.message}`, 'err');
+                    trace(e.stack, 'err');
+                }
+            }
+        })();
+    </script>
+</body>
+</html>

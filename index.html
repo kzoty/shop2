@@ -16,14 +16,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
 
     <!-- Link para manifest -->
-    <link rel="manifest" href="/shop2/manifest.json">
-    <link rel="apple-touch-icon" href="/shop2/android-launchericon-192-192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/android-launchericon-192-192.png">
 
     <!-- Para evitar zoom indesejado em inputs -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 </head>
 <body>
-    <div class="container">
+    <div id="appContainer" class="container">
         <!-- Header com busca -->
         <header class="header">
             <!--<div class="logo">
@@ -113,6 +113,33 @@
         </nav>
     </div>
 
+    <!-- Scripts - ordem importante! -->
+    <!-- 1. Data store (persistência local) -->
+    <script src="data-store.js"></script>
+    
+    <!-- 2. Autenticação -->
+    <script src="auth.js"></script>
+    
+    <!-- 3. Script principal -->
     <script src="script.js"></script>
+    
+    <!-- 4. Service worker para PWA -->
+    <script>
+        // Register service worker only on supported origins (avoid errors on file:// or null origins)
+        try {
+            if ('serviceWorker' in navigator) {
+                const canRegister = (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+                if (canRegister) {
+                    window.addEventListener('load', function() {
+                        navigator.serviceWorker.register('/sw.js').catch(err => console.warn('ServiceWorker registration failed:', err));
+                    });
+                } else {
+                    console.warn('ServiceWorker not registered: unsupported origin/protocol', location.protocol, location.hostname);
+                }
+            }
+        } catch (err) {
+            console.warn('ServiceWorker registration skipped due to error:', err);
+        }
+    </script>
 </body>
 </html>

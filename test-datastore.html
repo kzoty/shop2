@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DataStore Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #e0e0e0; }
+        #log { background: #252526; padding: 15px; border-radius: 5px; max-height: 400px; overflow-y: auto; }
+        .ok { color: #4ec94e; }
+        .err { color: #ff6b6b; }
+        .info { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>DataStore Loading Test</h1>
+    <div id="log"></div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        
+        function log(msg, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = msg;
+            logDiv.appendChild(p);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${msg}`);
+        }
+        
+        log('1. Starting test...', 'info');
+    </script>
+
+    <script>
+        log('2. Before data-store.js load', 'info');
+    </script>
+
+    <script src="data-store.js"></script>
+
+    <script>
+        log('3. After data-store.js load', 'info');
+        log(`   typeof DataStore: ${typeof DataStore}`, DataStore ? 'ok' : 'err');
+        log(`   typeof dataStore: ${typeof dataStore}`, dataStore ? 'ok' : 'err');
+        log(`   dataStore.initialized: ${dataStore ? dataStore.initialized : 'N/A'}`, 'info');
+    </script>
+
+    <script src="auth.js"></script>
+
+    <script>
+        log('4. After auth.js load', 'info');
+        log(`   typeof currentUser: ${typeof currentUser}`, 'info');
+        log(`   typeof initAuth: ${typeof initAuth}`, typeof initAuth === 'function' ? 'ok' : 'err');
+    </script>
+
+    <script src="script.js"></script>
+
+    <script>
+        log('5. After script.js load', 'info');
+        log(`   typeof categories: ${typeof categories}`, 'info');
+        log('All scripts loaded successfully!', 'ok');
+    </script>
+</body>
+</html>

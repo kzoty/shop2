@@ -1,13 +1,12 @@
-// Configuração do Supabase
-const SUPABASE_URL = 'https://nqplihfmbwlrbyzbxilh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xcGxpaGZtYndscmJ5emJ4aWxoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMjEzODQsImV4cCI6MjA3MTg5NzM4NH0.mn_2tyTloRpvUxPmyU7jWt1YYSa7Y3FRFGe0B4nGXSA';
+// Sistema de dados local (migrado de Supabase para JSON)
+// dataStore é inicializado em data-store.js
+// currentUser é gerenciado por auth.js (NÃO redeclare aqui!)
 
 // Variáveis globais
-let supabase = null;
-let categories = []; // Será preenchida do Supabase
-let products = []; // Será preenchida do Supabase
+let categories = []; // Será preenchida do data-store local
+let products = []; // Será preenchida do data-store local
 let filteredProducts = []; // Produtos filtrados
-let currentUser = null; // Usuário autenticado
+// currentUser is declared in auth.js, not here!
 
 // Carrinho de compras
 let cart = [];
@@ -40,320 +39,82 @@ function getAbsolutePath(relativePath) {
   return BASE_PATH + relativePath;
 }
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', async function() {
-    // Inicializar Supabase primeiro
-    await initializeSupabase();
-    
-    // Verificar autenticação
-    await checkAuthStatus();
-    
-    // Se não estiver autenticado, mostrar tela de login
-    if (!currentUser) {
-        showAuthScreen();
-        return;
-    }
-    
-    // Se estiver autenticado, inicializar a aplicação
-    await initializeApp();
-});
-
-// Inicializar Supabase
-async function initializeSupabase() {
+// Inicialização - função reutilizável
+async function performInitialization() {
+    console.log('[performInitialization] ====== START ======');
     try {
-        const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-        supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log('Cliente Supabase inicializado com sucesso');
-    } catch (error) {
-        console.error('Erro ao inicializar Supabase:', error);
-        showNotification('❌ Erro ao conectar com o servidor', 'error');
-    }
-}
-
-// Verificar status de autenticação
-async function checkAuthStatus() {
-    try {
-        if (!supabase) return;
+        // Verificar autenticação (carrega sessão do localStorage se existir)
+        console.log('[performInitialization] Calling initAuth()...');
+        const isAuthenticated = await initAuth();
+        console.log('[performInitialization] initAuth() returned:', isAuthenticated);
         
-        // Verificar sessão atual
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-            console.error('Erro ao verificar sessão:', error);
+        if (!isAuthenticated) {
+            // Mostrar tela de login
+            console.log('[performInitialization] User NOT authenticated');
+            console.log('[performInitialization] Showing auth screen...');
+            showAuthScreen();
+            console.log('[performInitialization] ====== Auth screen shown ======');
             return;
         }
         
-        if (session) {
-            try {
-                // Verificar se o usuário está na lista de usuários autorizados
-                let authorizedUser = null;
-                
-                // Primeira tentativa: com RLS habilitado
-                const { data: authData, error: authError } = await supabase
-                    .from('authorized_users')
-                    .select('*')
-                    .eq('email', session.user.email)
-                    .eq('is_active', true)
-                    .single();
-                
-                if (authError) {
-                    console.error('Erro ao verificar autorização com RLS:', authError);
-                    
-                    // Se falhar com RLS, tentar uma abordagem alternativa
-                    try {
-                        // Verificar se o usuário existe na tabela (sem RLS)
-                        const { data: fallbackUser, error: fallbackError } = await supabase
-                            .from('authorized_users')
-                            .select('*')
-                            .eq('email', session.user.email)
-                            .eq('is_active', true)
-                            .maybeSingle();
-                        
-                        if (fallbackError) {
-                            console.error('Erro no fallback:', fallbackError);
-                            throw new Error('Falha na verificação de autorização');
-                        }
-                        
-                        if (!fallbackUser) {
-                            throw new Error('Usuário não encontrado na lista de autorizados');
-                        }
-                        
-                        authorizedUser = fallbackUser;
-                        console.log('Usuário autorizado via fallback:', authorizedUser);
-                        
-                    } catch (fallbackError) {
-                        console.error('Falha no fallback:', fallbackError);
-                        await supabase.auth.signOut();
-                        return;
-                    }
-                } else {
-                    authorizedUser = authData;
-                    console.log('Usuário autorizado via RLS:', authorizedUser);
-                }
-                
-                if (!authorizedUser) {
-                    console.log('Usuário não autorizado:', session.user.email);
-                    await supabase.auth.signOut();
-                    return;
-                }
-                
-                currentUser = {
-                    id: session.user.id,
-                    email: session.user.email,
-                    name: authorizedUser.name,
-                    role: authorizedUser.role
-                };
-                
-                // Atualizar último login (com tratamento de erro)
-                try {
-                    await supabase
-                        .from('authorized_users')
-                        .update({ last_login: new Date().toISOString() })
-                        .eq('id', authorizedUser.id);
-                } catch (updateError) {
-                    console.warn('Erro ao atualizar último login:', updateError);
-                    // Não falhar se não conseguir atualizar o último login
-                }
-                
-                console.log('Usuário autenticado com sucesso:', currentUser);
-            } catch (error) {
-                console.error('Erro crítico ao verificar autenticação:', error);
-                await supabase.auth.signOut();
-            }
-        }
+        // Inicializar app
+        console.log('[performInitialization] User IS authenticated');
+        console.log('[performInitialization] Initializing app...');
+        await initializeApp();
+        console.log('[performInitialization] ====== App initialized ======');
     } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
+        console.error('[performInitialization] ====== ERROR ======');
+        console.error('[performInitialization] Error:', error);
+        console.error('[performInitialization] Stack:', error.stack);
     }
 }
 
-// Mostrar tela de autenticação
-function showAuthScreen() {
-    // Ocultar conteúdo principal
-    const mainContent = document.querySelector('.container');
-    if (mainContent) {
-        mainContent.style.display = 'none';
-    }
-    
-    // Criar tela de autenticação
-    const authScreen = document.createElement('div');
-    authScreen.className = 'auth-screen';
-    authScreen.id = 'authScreen';
-    
-    authScreen.innerHTML = `
-        <div class="auth-container">
-            <div class="auth-logo">
-                <i class="fas fa-bread-slice"></i>
-                <h1>Padaria Artesanal</h1>
-            </div>
-            
-            <div class="auth-form-container">
-                <h2>🔐 Acesso Restrito</h2>
-                <p>Faça login para acessar o sistema PDV</p>
-                
-                <form class="auth-form" onsubmit="handleLogin(event)">
-                    <div class="form-group">
-                        <label for="loginEmail">Email:</label>
-                        <input type="email" id="loginEmail" placeholder="seu-email@exemplo.com" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="loginPassword">Senha:</label>
-                        <input type="password" id="loginPassword" placeholder="Sua senha" required>
-                    </div>
-                    
-                    <button type="submit" class="login-btn" id="loginBtn">
-                        <i class="fas fa-sign-in-alt"></i>
-                        Entrar no Sistema
-                    </button>
-                </form>
-                
-                <div class="auth-footer">
-                    <p>⚠️ Apenas usuários autorizados podem acessar este sistema</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(authScreen);
-    
-    // Focar no campo de email
-    setTimeout(() => {
-        document.getElementById('loginEmail').focus();
-    }, 100);
+// Ouvir DOMContentLoaded se ainda não foi disparado
+console.log('[script.js] document.readyState:', document.readyState);
+if (document.readyState === 'loading') {
+    console.log('[script.js] DOM still loading, adding DOMContentLoaded listener...');
+    document.addEventListener('DOMContentLoaded', performInitialization);
+} else {
+    console.log('[script.js] DOM already loaded, calling initialization immediately...');
+    // DOM já está carregado, executar imediatamente
+    performInitialization();
 }
 
-// Função de login
-async function handleLogin(event) {
-    event.preventDefault();
-    
-    const emailInput = document.getElementById('loginEmail');
-    const passwordInput = document.getElementById('loginPassword');
-    const loginBtn = document.getElementById('loginBtn');
-    
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    
-    if (!email || !password) {
-        showNotification('❌ Preencha todos os campos!', 'error');
-        return;
-    }
-    
-    // Desabilitar botão durante o login
-    loginBtn.disabled = true;
-    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-    
-    try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-        
-        // Fazer login no Supabase
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-        
-        if (error) {
-            throw error;
-        }
-        
-        if (data.user) {
-            // Verificar se o usuário está autorizado
-            const { data: authorizedUser, error: authError } = await supabase
-                .from('authorized_users')
-                .select('*')
-                .eq('email', email)
-                .eq('is_active', true)
-                .single();
-            
-            if (authError || !authorizedUser) {
-                await supabase.auth.signOut();
-                throw new Error('Usuário não autorizado para acessar este sistema');
-            }
-            
-            // Login bem-sucedido
-            currentUser = {
-                id: data.user.id,
-                email: data.user.email,
-                name: authorizedUser.name,
-                role: authorizedUser.role
-            };
-            
-            // Atualizar último login
-            await supabase
-                .from('authorized_users')
-                .update({ last_login: new Date().toISOString() })
-                .eq('id', authorizedUser.id);
-            
-            showNotification(`✅ Bem-vindo, ${currentUser.name}!`, 'success');
-            
-            // Remover tela de autenticação e inicializar app
-            setTimeout(() => {
-                const authScreen = document.getElementById('authScreen');
-                if (authScreen) {
-                    document.body.removeChild(authScreen);
-                }
-                
-                const mainContent = document.querySelector('.container');
-                if (mainContent) {
-                    mainContent.style.display = 'block';
-                }
-                
-                initializeApp();
-            }, 1000);
-            
-        } else {
-            throw new Error('Dados de login inválidos');
-        }
-        
-    } catch (error) {
-        console.error('Erro no login:', error);
-        
-        let errorMessage = 'Erro ao fazer login';
-        if (error.message.includes('Invalid login credentials')) {
-            errorMessage = 'Email ou senha incorretos';
-        } else if (error.message.includes('not authorized')) {
-            errorMessage = 'Usuário não autorizado para acessar este sistema';
-        } else if (error.message.includes('Email not confirmed')) {
-            errorMessage = 'Email não confirmado. Verifique sua caixa de entrada';
-        }
-        
-        showNotification(`❌ ${errorMessage}`, 'error');
-        
-        // Limpar senha em caso de erro
-        passwordInput.value = '';
-        passwordInput.focus();
-    } finally {
-        // Reabilitar botão
-        loginBtn.disabled = false;
-        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-    }
-}
-
-// Inicializar aplicação após autenticação
 async function initializeApp() {
+    // Pequeno delay para garantir que o DOM está pronto
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // Inicializar elementos DOM
-    categoriesGrid = document.getElementById('categoriesGrid');
-    productsGrid = document.getElementById('productsGrid');
+    initializeDOMReferences();
+    
+    // Carregar dados locais
+    loadCategoriesFromLocalStorage();
+    loadProductsFromLocalStorage();
+    renderCategories();
+    renderProducts();
+    updateFooter();
+    addUserInfoToHeader();
+}
+
+/**
+ * Inicializa referências aos elementos DOM
+ */
+function initializeDOMReferences() {
+    categoriesGrid = document.getElementById('categoriesGrid') || document.querySelector('.categories-grid');
+    productsGrid = document.getElementById('productsGrid') || document.querySelector('.products-grid');
     searchInput = document.getElementById('searchInput');
-    searchBtn = document.getElementById('searchBtn');
+    searchBtn = document.querySelector('.search-btn');
     clearSearchBtn = document.getElementById('clearSearchBtn');
     totalProducts = document.getElementById('totalProducts');
     cartItems = document.getElementById('cartItems');
     cartValue = document.getElementById('cartValue');
     
-    // Adicionar informações do usuário no header
-    addUserInfoToHeader();
-    
-    // Carregar dados
-    await loadCategoriesFromSupabase();
-    await loadProductsFromSupabase();
-    renderProducts();
-    updateFooter();
-    
-    // Event listeners
+    // Registrar event listeners
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') handleSearch();
+        });
     }
     
     if (searchBtn) {
@@ -365,231 +126,37 @@ async function initializeApp() {
     }
 }
 
-// Adicionar informações do usuário no header
-function addUserInfoToHeader() {
-    const header = document.querySelector('.header');
-    if (!header || !currentUser) return;
-    
-    // Limpar controles de usuário existentes antes de adicionar novos
-    const existingUserControls = header.querySelectorAll('.user-controls');
-    existingUserControls.forEach(control => control.remove());
-    
-    const userControls = document.createElement('div');
-    userControls.className = 'user-controls';
-    userControls.id = 'userControls';
-    
-    userControls.innerHTML = `
-        <div class="user-info">
-            <i class="fas fa-user-circle"></i>
-            <span>${currentUser.name}</span>
-        </div>
-        <button class="logout-btn" onclick="handleLogout()">
-            <i class="fas fa-sign-out-alt"></i>
-            Sair
-        </button>
-    `;
-    
-    header.appendChild(userControls);
-}
-
-// Função de logout
-async function handleLogout() {
+// Carregar categorias do localStorage
+function loadCategoriesFromLocalStorage() {
     try {
-        if (supabase) {
-            await supabase.auth.signOut();
+        // Carregar categorias do data-store local
+        categories = dataStore.getCategories();
+        if (categories && categories.length > 0) {
+            console.log('Categorias carregadas do localStorage:', categories);
+            renderCategories();
+        } else {
+            console.warn('Nenhuma categoria encontrada');
         }
-        
-        // Limpar dados locais
-        currentUser = null;
-        categories = [];
-        products = [];
-        filteredProducts = [];
-        cart = [];
-        
-        // Limpar interface
-        if (categoriesGrid) categoriesGrid.innerHTML = '';
-        if (productsGrid) productsGrid.innerHTML = '';
-        
-        // Limpar controles de usuário do header
-        const userControls = document.querySelector('#userControls');
-        if (userControls) {
-            userControls.remove();
-        }
-        
-        // Também limpar por classe (backup)
-        const allUserControls = document.querySelectorAll('.user-controls');
-        allUserControls.forEach(control => control.remove());
-        
-        showNotification('👋 Logout realizado com sucesso!', 'success');
-        
-        // Redirecionar para tela de login
-        setTimeout(() => {
-            const mainContent = document.querySelector('.container');
-            if (mainContent) {
-                mainContent.style.display = 'none';
-            }
-            
-            showAuthScreen();
-        }, 1000);
-        
     } catch (error) {
-        console.error('Erro no logout:', error);
-        showNotification('❌ Erro ao fazer logout', 'error');
+        console.error('Erro ao carregar categorias:', error);
     }
 }
 
-// Carregar categorias do Supabase
-async function loadCategoriesFromSupabase() {
+// Carregar produtos do localStorage
+function loadProductsFromLocalStorage() {
     try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-
-        console.log('Buscando categorias do Supabase...');
-        showLoadingStatus('Carregando categorias...');
+        // Carregar produtos do data-store local
+        products = dataStore.getProducts().map(product => ({
+            id: product.id,
+            name: product.name,
+            price: Number(product.price),
+            category_id: product.category_id
+        }));
         
-        const { data, error } = await supabase
-            .from('category')
-            .select('id, name, icon, color')
-            .order('name', { ascending: true });
-
-        if (error) {
-            throw error;
-        }
-
-        if (data && data.length > 0) {
-            categories = data;
-            console.log('Categorias carregadas do Supabase:', categories);
-            renderCategories();
-        } else {
-            console.log('Nenhuma categoria encontrada no Supabase, usando dados padrão');
-            // Usar dados padrão se não houver categorias no Supabase
-            categories = [
-                { id: 1, name: 'Pães Artesanais', icon: 'fas fa-bread-slice', color: '#8B4513' },
-                { id: 2, name: 'Doces e Confeitaria', icon: 'fas fa-cake-candles', color: '#FF69B4' },
-                { id: 3, name: 'Salgados', icon: 'fas fa-pizza-slice', color: '#FF6347' },
-                { id: 4, name: 'Bebidas', icon: 'fas fa-coffee', color: '#8B4513' },
-                { id: 5, name: 'Especiais', icon: 'fas fa-star', color: '#FFD700' },
-                { id: 6, name: 'Sem Glúten', icon: 'fas fa-leaf', color: '#32CD32' }
-            ];
-            renderCategories();
-        }
-
-    } catch (error) {
-        console.error('Erro ao carregar categorias do Supabase:', error);
-        // Fallback para dados hard-coded
-        categories = [
-            { id: 1, name: 'Pães Artesanais', icon: 'fas fa-bread-slice', color: '#8B4513' },
-            { id: 2, name: 'Doces e Confeitaria', icon: 'fas fa-cake-candles', color: '#FF69B4' },
-            { id: 3, name: 'Salgados', icon: 'fas fa-pizza-slice', color: '#FF6347' },
-            { id: 4, name: 'Bebidas', icon: 'fas fa-coffee', color: '#8B4513' },
-            { id: 5, name: 'Especiais', icon: 'fas fa-star', color: '#FFD700' },
-            { id: 6, name: 'Sem Glúten', icon: 'fas fa-leaf', color: '#32CD32' }
-        ];
-        renderCategories();
-    }
-}
-
-// Carregar produtos do Supabase
-async function loadProductsFromSupabase() {
-    try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-
-        console.log('Buscando produtos do Supabase...');
-        
-        // Buscar produtos com relacionamento de categoria
-        const { data, error } = await supabase
-            .from('product')
-            .select(`
-                id,
-                name,
-                price,
-                categoryId,
-                category:categoryId(id, name, icon)
-            `)
-            .order('name', { ascending: true });
-
-        if (error) {
-            throw error;
-        }
-
-        if (data && data.length > 0) {
-            // Processar dados para incluir informações da categoria
-            products = data.map(product => ({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                categoryId: product.categoryId,
-                category: product.category?.name || 'Sem Categoria',
-                icon: product.category?.icon || 'fas fa-box'
-            }));
-            
-            filteredProducts = [...products];
-            console.log('Produtos carregados do Supabase:', products);
-        } else {
-            console.log('Nenhum produto encontrado no Supabase, usando dados padrão');
-            // Usar dados padrão se não houver produtos no Supabase
-            products = [
-                {
-                    id: 1,
-                    name: 'Pão de Fermentação Natural',
-                    price: 8.50,
-                    categoryId: 1,
-                    category: 'Pães Artesanais',
-                    icon: 'fas fa-bread-slice'
-                },
-                {
-                    id: 2,
-                    name: 'Croissant Tradicional',
-                    price: 6.80,
-                    categoryId: 1,
-                    category: 'Pães Artesanais',
-                    icon: 'fas fa-bread-slice'
-                },
-                {
-                    id: 3,
-                    name: 'Bolo de Chocolate',
-                    price: 12.90,
-                    categoryId: 2,
-                    category: 'Doces e Confeitaria',
-                    icon: 'fas fa-cake-candles'
-                }
-            ];
-            filteredProducts = [...products];
-        }
-
-    } catch (error) {
-        console.error('Erro ao carregar produtos do Supabase:', error);
-        // Fallback para dados hard-coded
-        products = [
-            {
-                id: 1,
-                name: 'Pão de Fermentação Natural',
-                price: 8.50,
-                categoryId: 1,
-                category: 'Pães Artesanais',
-                icon: 'fas fa-bread-slice'
-            },
-            {
-                id: 2,
-                name: 'Croissant Tradicional',
-                price: 6.80,
-                categoryId: 1,
-                category: 'Pães Artesanais',
-                icon: 'fas fa-bread-slice'
-            },
-            {
-                id: 3,
-                name: 'Bolo de Chocolate',
-                price: 12.90,
-                categoryId: 2,
-                category: 'Doces e Confeitaria',
-                icon: 'fas fa-cake-candles'
-            }
-        ];
         filteredProducts = [...products];
+        console.log('Produtos carregados do localStorage:', products);
+    } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
     }
 }
 
@@ -621,7 +188,7 @@ function renderCategories() {
         `;
         
         // Adicionar event listener para click (filtro)
-        categoryCard.addEventListener('click', () => filterByCategory(category.name));
+        categoryCard.addEventListener('click', () => filterByCategory(category.id));
 
         // Botão de edição (dblclick/double-tap apenas no ícone)
         const editBtn = categoryCard.querySelector('.card-edit-btn');
@@ -783,52 +350,44 @@ async function saveNewCategory(event) {
     saveBtn.textContent = 'Salvando...';
     
     try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-        
         showNotification('🔄 Salvando nova categoria...', 'info');
         
-        // Inserir nova categoria no Supabase
-        const { data, error } = await supabase
-            .from('category')
-            .insert([
-                {
-                    name: name,
-                    icon: icon,
-                    color: color
-                }
-            ])
-            .select();
+        // Gerar novo ID (maior ID existente + 1)
+        const maxId = categories.length > 0 ? Math.max(...categories.map(c => c.id)) : 0;
+        const newId = maxId + 1;
         
-        if (error) {
-            throw error;
-        }
+        // Criar novo objeto de categoria
+        const newCategory = {
+            id: newId,
+            name: name,
+            icon: icon,
+            color: color,
+            created_at: new Date().toISOString()
+        };
         
-        if (data && data.length > 0) {
-            const newCategory = data[0];
-            
-            // Adicionar à lista local
-            categories.push(newCategory);
-            
-            // Reordenar por nome
-            categories.sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Re-renderizar categorias
-            renderCategories();
-            
-            // Fechar modal
-            closeAddCategoryModal();
-            
-            showNotification(`✅ Categoria "${name}" criada com sucesso!`, 'success');
-            
-            // Limpar formulário
-            nameInput.value = '';
-            iconInput.value = '';
-            colorInput.value = '';
-        } else {
-            throw new Error('Nenhum dado retornado do Supabase');
-        }
+        // Adicionar à lista local
+        categories.push(newCategory);
+        
+        // Reordenar por nome
+        categories.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Salvar no dataStore (localStorage + data.json)
+        const data = dataStore.getData();
+        data.categories = categories;
+        dataStore.saveData(data);
+        
+        // Re-renderizar categorias
+        renderCategories();
+        
+        // Fechar modal
+        closeAddCategoryModal();
+        
+        showNotification(`✅ Categoria "${name}" criada com sucesso!`, 'success');
+        
+        // Limpar formulário
+        nameInput.value = '';
+        iconInput.value = '';
+        colorInput.value = '';
         
     } catch (error) {
         console.error('Erro ao salvar categoria:', error);
@@ -952,84 +511,60 @@ async function saveNewProduct(event) {
     saveBtn.textContent = 'Salvando...';
     
     try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-        
         showNotification('🔄 Salvando novo produto...', 'info');
         
-        // Inserir novo produto no Supabase
-        const { data, error } = await supabase
-            .from('product')
-            .insert([
-                {
-                    name: name,
-                    categoryId: categoryId,
-                    price: price
-                }
-            ])
-            .select(`
-                id,
-                name,
-                price,
-                categoryId,
-                category:categoryId(id, name, icon)
-            `);
+        // Gerar novo ID (maior ID existente + 1)
+        const maxId = products.length > 0 ? Math.max(...products.map(p => p.id)) : 0;
+        const newId = maxId + 1;
         
-        if (error) {
-            throw error;
-        }
+        // Criar novo objeto de produto
+        const newProduct = {
+            id: newId,
+            name: name,
+            category_id: categoryId,
+            price: price,
+            created_at: new Date().toISOString()
+        };
         
-        if (data && data.length > 0) {
-            const newProduct = data[0];
-            
-            // Processar dados para incluir informações da categoria
-            const processedProduct = {
-                id: newProduct.id,
-                name: newProduct.name,
-                price: newProduct.price,
-                categoryId: newProduct.categoryId,
-                category: newProduct.category?.name || 'Sem Categoria',
-                icon: newProduct.category?.icon || 'fas fa-box'
-            };
-            
-            // Adicionar à lista local
-            products.push(processedProduct);
-            
-            // Reordenar por nome
-            products.sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Verificar se deve filtrar por categoria
-            const selectedCategory = categories.find(cat => cat.id === categoryId);
-            console.log('Categoria selecionada para o novo produto:', selectedCategory);
-            
-            if (selectedCategory) {
-                console.log('Atualizando seleção visual e filtrando por:', selectedCategory.name);
-                // Sempre atualizar a seleção visual para a nova categoria
-                updateCategorySelection(selectedCategory.name);
-                // Sempre filtrar produtos pela nova categoria
-                filterByCategory(selectedCategory.name);
-            } else {
-                console.log('Categoria não encontrada, apenas re-renderizando');
-                // Se não encontrou a categoria, apenas re-renderizar
-                renderProducts();
-            }
-            
-            // Fechar modal
-            closeAddProductModal();
-            
-            showNotification(`✅ Produto "${name}" criado com sucesso!`, 'success');
-            
-            // Limpar formulário
-            nameInput.value = '';
-            categorySelect.value = '';
-            priceInput.value = '';
-            
-            // Atualizar footer
-            updateFooter();
+        // Adicionar à lista local
+        products.push(newProduct);
+        
+        // Reordenar por nome
+        products.sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Salvar no dataStore (localStorage + data.json)
+        const data = dataStore.getData();
+        data.products = products;
+        dataStore.saveData(data);
+        
+        // Verificar se deve filtrar por categoria
+        const selectedCategory = categories.find(cat => cat.id === categoryId);
+        console.log('Categoria selecionada para o novo produto:', selectedCategory);
+        
+        if (selectedCategory) {
+            console.log('Atualizando seleção visual e filtrando por:', selectedCategory.name);
+            // Sempre atualizar a seleção visual para a nova categoria
+            updateCategorySelection(selectedCategory.name);
+            // Sempre filtrar produtos pela nova categoria
+            filterByCategory(selectedCategory.id);
         } else {
-            throw new Error('Nenhum dado retornado do Supabase');
+            console.log('Categoria não encontrada, apenas re-renderizando');
+            // Se não encontrou a categoria, apenas re-renderizar
+            renderProducts();
         }
+        
+        // Fechar modal
+        closeAddProductModal();
+        
+        showNotification(`✅ Produto "${name}" criado com sucesso!`, 'success');
+        
+        // Limpar formulário
+        nameInput.value = '';
+        categorySelect.value = '';
+        priceInput.value = '';
+        
+        // Atualizar footer
+        updateFooter();
         
     } catch (error) {
         console.error('Erro ao salvar produto:', error);
@@ -1102,9 +637,10 @@ function renderProducts() {
         const cartItem = cart.find(item => item.id === product.id);
         const quantity = cartItem ? cartItem.quantity : 0;
         
-        // Encontrar a categoria do produto para obter a cor
-        const productCategory = categories.find(cat => cat.id === product.categoryId);
+        // Encontrar a categoria do produto para obter a cor e nome
+        const productCategory = categories.find(cat => cat.id === product.category_id);
         const categoryColor = productCategory ? productCategory.color : '#667eea'; // Fallback para cor padrão
+        const categoryName = productCategory ? productCategory.name : 'Sem Categoria'; // Fallback para nome
         const textColor = getContrastTextColor(categoryColor);
         
         productCard.innerHTML = `
@@ -1112,14 +648,14 @@ function renderProducts() {
                 <i class="fas fa-pen"></i>
             </button>
             <div class="product-image" style="background: ${categoryColor}; color: ${textColor}">
-                <i class="${product.icon}"></i>
+                <i class="${productCategory?.icon || 'fas fa-box'}"></i>
             </div>
             <div class="product-info">
                 <div class="product-name-container">
                     <h3 class="product-name">${product.name}</h3>
                     ${quantity > 0 ? `<span class="product-counter">${quantity}</span>` : ''}
                 </div>
-                <div class="product-category">${product.category}</div>
+                <div class="product-category">${categoryName}</div>
                 <div class="product-price">R$ ${product.price.toFixed(2)}</div>
                 <button class="add-to-cart-btn" onclick="addToCart(${product.id})">
                     ADD +
@@ -1229,17 +765,17 @@ function clearSearch() {
 }
 
 // Filtrar por categoria
-function filterByCategory(categoryName) {
-    console.log('Filtrando por categoria:', categoryName);
-    console.log('Produtos disponíveis:', products.map(p => ({ name: p.name, category: p.category })));
+function filterByCategory(categoryId) {
+    console.log('Filtrando por categoria ID:', categoryId);
+    console.log('Produtos disponíveis:', products.map(p => ({ name: p.name, category_id: p.category_id })));
     
-    if (categoryName === 'Todas') {
+    if (categoryId === 'Todas') {
         filteredProducts = [...products];
     } else {
-        filteredProducts = products.filter(product => product.category === categoryName);
+        filteredProducts = products.filter(product => product.category_id === categoryId);
     }
     
-    console.log('Produtos filtrados:', filteredProducts.map(p => ({ name: p.name, category: p.category })));
+    console.log('Produtos filtrados:', filteredProducts.map(p => ({ name: p.name, category_id: p.category_id })));
     
     renderProducts();
     updateFooter();
@@ -1252,12 +788,15 @@ function filterByCategory(categoryName) {
     });
     
     // Destacar categoria selecionada
-    const selectedCard = Array.from(allCategories).find(card => 
-        card.querySelector('h3').textContent === categoryName
-    );
-    if (selectedCard) {
-        selectedCard.style.borderColor = '#667eea';
-        selectedCard.classList.add('selected');
+    const selectedCategory = categories.find(cat => cat.id === categoryId);
+    if (selectedCategory) {
+        const selectedCard = Array.from(allCategories).find(card => 
+            card.querySelector('h3').textContent === selectedCategory.name
+        );
+        if (selectedCard) {
+            selectedCard.style.borderColor = '#667eea';
+            selectedCard.classList.add('selected');
+        }
     }
 }
 
@@ -1998,79 +1537,79 @@ function calculateChange() {
 
 // Função para finalizar venda
 async function finalizeSale() {
-    const paymentMethod = window.selectedPaymentMethod;
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    if (paymentMethod === 'dinheiro') {
-        const cashAmount = parseFloat(document.getElementById('cashAmount').value) || 0;
-        const change = cashAmount - total;
-
-        showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Recebido: R$ ${cashAmount.toFixed(2)} | Troco: R$ ${change.toFixed(2)}`, 'success');
-    } else {
-        // Para outros métodos, mostrar confirmação
-        const confirmPayment = confirm(`Confirma o pagamento de R$ ${total.toFixed(2)} em ${paymentMethod.toUpperCase()}?`);
-        if (!confirmPayment) return;
-
-        showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Método: ${paymentMethod.toUpperCase()}`, 'success');
-    }
-
-    // Salvar venda no banco de dados
     try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
+        const paymentMethod = window.selectedPaymentMethod;
+        if (!paymentMethod) {
+            showNotification('Selecione uma forma de pagamento!', 'error');
+            return;
         }
 
-        showNotification('💾 Salvando venda no banco de dados...', 'info');
-
-        // 1. Salvar venda principal na tabela 'sales'
-        const { data: saleData, error: saleError } = await supabase
-            .from('sales')
-            .insert([{
-                total_value: total,
-                payment_method: paymentMethod
-            }])
-            .select()
-            .single();
-
-        if (saleError) {
-            throw new Error(`Erro ao salvar venda: ${saleError.message}`);
+        // Validar se há itens no carrinho
+        if (!cart || cart.length === 0) {
+            showNotification('Carrinho vazio!', 'error');
+            return;
         }
 
-        if (!saleData || !saleData.id) {
-            throw new Error('ID da venda não foi retornado');
+        // Formatar valores numéricos corretamente
+        const total = Number(cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2));
+        
+        if (paymentMethod === 'dinheiro') {
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value) || 0;
+            if (cashAmount < total) {
+                showNotification('Valor em dinheiro insuficiente!', 'error');
+                return;
+            }
         }
 
-        // 2. Salvar itens da venda na tabela 'sale_items'
-        const saleItems = cart.map(item => ({
-            sale_id: saleData.id,
-            category_id: item.categoryId,
-            category_name: item.category,
-            product_id: item.id,
-            product_name: item.name,
-            quantity: item.quantity,
-            unit_price: item.price,
-            subtotal: item.price * item.quantity
-        }));
+        // 1. Salvar a venda principal (no data-store local)
+        const saleData = dataStore.addSale({
+            total_value: total,
+            payment_method: paymentMethod
+        });
 
-        const { error: itemsError } = await supabase
-            .from('sale_items')
-            .insert(saleItems);
+        // 2. Preparar e salvar os itens da venda
+        const saleItems = cart.map(item => {
+            const unitPrice = Number(item.price.toFixed(2));
+            const quantity = Number(item.quantity);
+            const subtotal = Number((unitPrice * quantity).toFixed(2));
 
-        if (itemsError) {
-            throw new Error(`Erro ao salvar itens da venda: ${itemsError.message}`);
+            const category = categories.find(c => c.id === item.category_id);
+
+            return {
+                sale_id: saleData.id,
+                category_id: item.category_id,
+                category_name: category ? category.name : 'Sem categoria',
+                product_id: item.id,
+                product_name: item.name,
+                quantity: quantity,
+                unit_price: unitPrice,
+                subtotal: subtotal
+            };
+        });
+
+        // Salvar cada item no data-store
+        saleItems.forEach(item => dataStore.addSaleItem(item));
+
+        console.log('Venda salva com sucesso:', { sale: saleData, items: saleItems });
+
+        if (paymentMethod === 'dinheiro') {
+            const cashAmount = parseFloat(document.getElementById('cashAmount').value);
+            const change = cashAmount - total;
+            showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Recebido: R$ ${cashAmount.toFixed(2)} | Troco: R$ ${change.toFixed(2)}`, 'success');
+        } else {
+            showNotification(`Venda finalizada! Total: R$ ${total.toFixed(2)} | Método: ${paymentMethod.toUpperCase()}`, 'success');
         }
-
-        showNotification('✅ Venda salva com sucesso no banco de dados!', 'success');
-        console.log('Venda salva:', { sale: saleData, items: saleItems });
+        
+        // Limpar carrinho e fechar modal
+        cart = [];
+        closeCheckoutModal();
+        updateFooter();
+        renderProducts();
 
     } catch (error) {
-        console.error('Erro ao salvar venda:', error);
-        showNotification(`❌ Erro ao salvar venda: ${error.message}`, 'error');
-        // Não limpar carrinho se houve erro no salvamento
-        return;
+        console.error('Erro ao finalizar venda:', error);
+        showNotification('Erro ao finalizar venda. Tente novamente.', 'error');
     }
-
-    // Limpar carrinho e fechar modal apenas se o salvamento foi bem-sucedido
     cart = [];
     closeCheckoutModal();
     updateFooter();
@@ -2129,6 +1668,12 @@ function showEditCategoryModal(category) {
                     </button>
                     <button type="submit" class="save-category-btn" id="updateCategoryBtn">
                         Atualizar Categoria
+                    </button>
+                </div>
+                <div class="delete-category-section">
+                    <button type="button" class="delete-category-btn" onclick="confirmDeleteCategory(${category.id})" title="Deletar categoria">
+                        <i class="fas fa-trash-alt"></i>
+                        Excluir Categoria
                     </button>
                 </div>
             </form>
@@ -2243,62 +1788,39 @@ async function updateCategory(event, categoryId) {
     updateBtn.textContent = 'Atualizando...';
     
     try {
-        if (!supabase) {
-            throw new Error('Cliente Supabase não inicializado');
-        }
-        
         showNotification('🔄 Atualizando categoria...', 'info');
         
-        // Atualizar categoria no Supabase
-        const { data, error } = await supabase
-            .from('category')
-            .update({
-                name: name,
-                icon: icon,
-                color: color
-            })
-            .eq('id', categoryId)
-            .select();
-        
-        if (error) {
-            throw error;
-        }
-        
-        if (data && data.length > 0) {
-            const updatedCategory = data[0];
+        // Atualizar categoria na lista local
+        const categoryIndex = categories.findIndex(cat => cat.id === categoryId);
+        if (categoryIndex !== -1) {
+            categories[categoryIndex].name = name;
+            categories[categoryIndex].icon = icon;
+            categories[categoryIndex].color = color;
             
-            // Atualizar na lista local
-            const categoryIndex = categories.findIndex(cat => cat.id === categoryId);
-            if (categoryIndex !== -1) {
-                categories[categoryIndex] = updatedCategory;
-                
-                // Reordenar por nome
-                categories.sort((a, b) => a.name.localeCompare(b.name));
-                
-                // Re-renderizar categorias
-                renderCategories();
-                
-                // Fechar modal
-                closeEditCategoryModal();
-                
-                showNotification(`✅ Categoria "${name}" atualizada com sucesso!`, 'success');
-                
-                // Se houver produtos filtrados por esta categoria, atualizar a exibição
-                const currentlySelectedCategory = getCurrentlySelectedCategory();
-                if (currentlySelectedCategory && currentlySelectedCategory.id === categoryId) {
-                    // Atualizar nome da categoria nos produtos filtrados
-                    filteredProducts.forEach(product => {
-                        if (product.categoryId === categoryId) {
-                            product.category = name;
-                        }
-                    });
-                    renderProducts();
-                }
-            } else {
-                throw new Error('Categoria não encontrada na lista local');
+            // Reordenar por nome
+            categories.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Salvar no dataStore
+            const data = dataStore.getData();
+            data.categories = categories;
+            dataStore.saveData(data);
+            
+            // Re-renderizar categorias
+            renderCategories();
+            
+            // Fechar modal
+            closeEditCategoryModal();
+            
+            showNotification(`✅ Categoria "${name}" atualizada com sucesso!`, 'success');
+            
+            // Se houver produtos filtrados por esta categoria, atualizar a exibição
+            const currentlySelectedCategory = getCurrentlySelectedCategory();
+            if (currentlySelectedCategory && currentlySelectedCategory.id === categoryId) {
+                // Filtrar novamente para atualizar
+                filterByCategory(categoryId);
             }
         } else {
-            throw new Error('Nenhum dado retornado do Supabase');
+            throw new Error('Categoria não encontrada na lista local');
         }
         
     } catch (error) {
@@ -2321,7 +1843,7 @@ function showEditProductModal(product) {
     modal.id = 'editProductModal';
     
     const categoryOptions = categories.map(category => {
-        const selected = category.id === product.categoryId ? 'selected' : '';
+        const selected = category.id === product.category_id ? 'selected' : '';
         return `<option value="${category.id}" ${selected}>${category.name}</option>`;
     }).join('');
     
@@ -2405,7 +1927,7 @@ async function updateProduct(event, productId) {
         return;
     }
 
-    const hasChanges = name !== original.name || price !== original.price || categoryId !== original.categoryId;
+    const hasChanges = name !== original.name || price !== original.price || categoryId !== original.category_id;
     if (!hasChanges) {
         showNotification('ℹ️ Nenhuma alteração foi feita!', 'info');
         closeEditProductModal();
@@ -2416,45 +1938,29 @@ async function updateProduct(event, productId) {
     updateBtn.textContent = 'Atualizando...';
 
     try {
-        if (!supabase) throw new Error('Cliente Supabase não inicializado');
         showNotification('🔄 Atualizando produto...', 'info');
 
-        const { data, error } = await supabase
-            .from('product')
-            .update({ name, price, categoryId })
-            .eq('id', productId)
-            .select(`
-                id,
-                name,
-                price,
-                categoryId,
-                category:categoryId(id, name, icon)
-            `);
-
-        if (error) throw error;
-        if (!data || data.length === 0) throw new Error('Nenhum dado retornado do Supabase');
-
-        const updated = data[0];
-        const processed = {
-            id: updated.id,
-            name: updated.name,
-            price: updated.price,
-            categoryId: updated.categoryId,
-            category: updated.category?.name || 'Sem Categoria',
-            icon: updated.category?.icon || 'fas fa-box'
-        };
-
-        // Atualizar lista local
+        // Atualizar produto na lista local
         const idx = products.findIndex(p => p.id === productId);
         if (idx !== -1) {
-            products[idx] = processed;
+            products[idx].name = name;
+            products[idx].price = price;
+            products[idx].category_id = categoryId;
+            
+            // Salvar no dataStore
+            const data = dataStore.getData();
+            data.products = products;
+            dataStore.saveData(data);
         }
 
         // Reaplicar filtro atual
         const currentSelected = categoriesGrid.querySelector('.category-card.selected');
         if (currentSelected) {
             const selectedName = currentSelected.querySelector('h3').textContent;
-            filterByCategory(selectedName);
+            const selectedCategory = categories.find(cat => cat.name === selectedName);
+            if (selectedCategory) {
+                filterByCategory(selectedCategory.id);
+            }
         } else {
             filteredProducts = [...products];
             renderProducts();
@@ -2473,6 +1979,88 @@ async function updateProduct(event, productId) {
 }
 
 // Função para confirmar exclusão do produto
+// =====================
+// Exclusão de Categoria
+// =====================
+
+function confirmDeleteCategory(categoryId) {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) {
+        showNotification('❌ Categoria não encontrada!', 'error');
+        return;
+    }
+
+    // Verificar se há produtos nessa categoria
+    const productsInCategory = products.filter(p => p.category_id === categoryId);
+    if (productsInCategory.length > 0) {
+        showNotification(
+            `❌ Não é possível excluir a categoria "${category.name}" porque ela possui ${productsInCategory.length} produto(s).\n\nRemova todos os produtos primeiro.`,
+            'error'
+        );
+        return;
+    }
+
+    const confirmed = confirm(`Exclusão é irreversível.\n\nDeseja realmente excluir a categoria "${category.name}"?`);
+
+    if (confirmed) {
+        deleteCategory(categoryId);
+    }
+}
+
+// Função para excluir categoria
+async function deleteCategory(categoryId) {
+    const category = categories.find(c => c.id === categoryId);
+    if (!category) {
+        showNotification('❌ Categoria não encontrada!', 'error');
+        return;
+    }
+
+    // Validação: verificar se há produtos nessa categoria
+    const productsInCategory = products.filter(p => p.category_id === categoryId);
+    if (productsInCategory.length > 0) {
+        showNotification(
+            `❌ Não é possível excluir a categoria porque ela possui ${productsInCategory.length} produto(s).`,
+            'error'
+        );
+        return;
+    }
+
+    // Se passou nas validações, prosseguir com a exclusão
+    const deleteBtn = document.querySelector('.delete-category-btn');
+    if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    }
+
+    try {
+        showNotification('🔄 Excluindo categoria...', 'info');
+
+        // Remover da lista local
+        categories = categories.filter(c => c.id !== categoryId);
+        
+        // Salvar no dataStore
+        const data = dataStore.getData();
+        data.categories = categories;
+        dataStore.saveData(data);
+
+        // Re-renderizar categorias
+        renderCategories();
+
+        // Fechar modal
+        closeEditCategoryModal();
+
+        showNotification(`✅ Categoria "${category.name}" excluída com sucesso!`, 'success');
+
+    } catch (err) {
+        console.error('Erro ao excluir categoria:', err);
+        showNotification(`❌ Erro ao excluir categoria: ${err.message}`, 'error');
+    }
+}
+
+// =====================
+// Exclusão de Produto
+// =====================
+
 function confirmDeleteProduct(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) {
@@ -2519,20 +2107,16 @@ async function deleteProduct(productId) {
     }
 
     try {
-        if (!supabase) throw new Error('Cliente Supabase não inicializado');
-
         showNotification('🔄 Excluindo produto...', 'info');
-
-        const { error } = await supabase
-            .from('product')
-            .delete()
-            .eq('id', productId);
-
-        if (error) throw error;
 
         // Remover da lista local
         products = products.filter(p => p.id !== productId);
         filteredProducts = filteredProducts.filter(p => p.id !== productId);
+        
+        // Salvar no dataStore
+        const data = dataStore.getData();
+        data.products = products;
+        dataStore.saveData(data);
 
         // Re-renderizar produtos
         renderProducts();
@@ -2644,6 +2228,76 @@ if ('serviceWorker' in navigator) {
     });
   }
   
+  // =====================
+  // Exportação de Dados
+  // =====================
+  
+  /**
+   * Exporta todos os dados do localStorage como arquivo JSON
+   * O usuário pode baixar e atualizar manualmente a base de dados
+   */
+  function exportDataAsJSON() {
+    try {
+      // Obter dados do dataStore
+      const data = dataStore.getData();
+      
+      // Criar objeto com timestamp
+      const exportData = {
+        ...data,
+        exported_at: new Date().toISOString(),
+        exported_by: currentUser?.email || 'unknown'
+      };
+      
+      // Converter para JSON com formatação
+      const jsonString = JSON.stringify(exportData, null, 2);
+      
+      // Criar blob
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Criar URL
+      const url = URL.createObjectURL(blob);
+      
+      // Criar link de download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `padaria-dados-${new Date().toISOString().split('T')[0]}.json`;
+      
+      // Disparar download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Liberar URL
+      URL.revokeObjectURL(url);
+      
+      showNotification('✅ Dados exportados com sucesso!', 'success');
+      console.log('[exportDataAsJSON] Arquivo baixado:', link.download);
+    } catch (error) {
+      console.error('[exportDataAsJSON] Erro ao exportar dados:', error);
+      showNotification(`❌ Erro ao exportar dados: ${error.message}`, 'error');
+    }
+  }
+  
+  // =====================
+  // Detecção PWA
+  // =====================
+  
+  // Detectar se está em modo standalone (tela cheia)
+  function isRunningStandalone() {
+    return (window.matchMedia('(display-mode: standalone)').matches) || 
+           (window.navigator.standalone) || 
+           (document.referrer.includes('android-app://'));
+  }
+  
+  // Ajustar interface para modo tela cheia
+  if (isRunningStandalone()) {
+    document.documentElement.style.setProperty('--safe-area-inset-top', 'env(safe-area-inset-top)');
+    document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
+    document.body.classList.add('pwa-mode');
+    // Forçar altura 100vh para Android Chrome
+    document.body.style.height = '100vh';
+}
+
   // Detectar se está em modo standalone (tela cheia)
   function isRunningStandalone() {
     return (window.matchMedia('(display-mode: standalone)').matches) || 

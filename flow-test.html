@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flow Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+        .log { background: white; padding: 20px; border-radius: 5px; }
+        .step { margin: 10px 0; padding: 10px; background: #efefef; border-left: 3px solid blue; }
+        .pass { border-left-color: green; }
+        .fail { border-left-color: red; }
+    </style>
+</head>
+<body>
+    <h1>Flow Test - Step by Step</h1>
+    <div class="log" id="log"></div>
+
+    <script src="data-store.js"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        const logDiv = document.getElementById('log');
+        
+        function logStep(title, status = 'pending', details = '') {
+            const div = document.createElement('div');
+            div.className = `step ${status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : ''}`;
+            div.innerHTML = `<strong>${title}</strong>${details ? '<br>' + details : ''}`;
+            logDiv.appendChild(div);
+            console.log(`[${status.toUpperCase()}] ${title} ${details}`);
+        }
+        
+        (async () => {
+            try {
+                logStep('1. Scripts loaded', 'pass', `dataStore exists: ${typeof dataStore !== 'undefined'}`);
+                logStep('2. Global variables check', 'pass', `
+                    - categories: ${Array.isArray(categories) ? '✓' : '✗'} 
+                    - currentUser: ${currentUser === undefined ? 'undefined' : 'defined'}
+                    - initAuth: ${typeof initAuth === 'function' ? '✓' : '✗'}
+                `);
+                
+                logStep('3. DOM check', 'pass', `
+                    - appContainer: ${document.getElementById('appContainer') ? '✓' : '✗'}
+                    - categoriesGrid: ${document.getElementById('categoriesGrid') ? '✓' : '✗'}
+                    - authScreen: ${document.getElementById('authScreen') ? '✓' : '✗'}
+                `);
+                
+                logStep('4. DataStore.initialize()', 'pending');
+                await dataStore.initialize();
+                logStep('4. DataStore.initialize()', 'pass', `initialized: ${dataStore.initialized}`);
+                
+                logStep('5. Load data', 'pending');
+                const cats = dataStore.getCategories();
+                const prods = dataStore.getProducts();
+                logStep('5. Load data', 'pass', `categories: ${cats.length}, products: ${prods.length}`);
+                
+                logStep('6. Call initAuth()', 'pending');
+                const isAuth = await initAuth();
+                logStep('6. Call initAuth()', 'pass', `authenticated: ${isAuth}`);
+                
+                if (!isAuth) {
+                    logStep('7. Show login screen', 'pending');
+                    showAuthScreen();
+                    logStep('7. Show login screen', 'pass', `authScreen visible: ${document.getElementById('authScreen')?.style.display !== 'none'}`);
+                } else {
+                    logStep('7. Initialize app', 'pending');
+                    await initializeApp();
+                    logStep('7. Initialize app', 'pass');
+                }
+                
+                logStep('✅ FLOW COMPLETE', 'pass');
+                
+            } catch (e) {
+                logStep(`❌ ERROR: ${e.message}`, 'fail', e.stack);
+            }
+        })();
+    </script>
+</body>
+</html>
